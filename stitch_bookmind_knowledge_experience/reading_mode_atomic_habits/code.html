@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BookMind | PDF Reader</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Playfair+Display:wght@700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;family=Playfair+Display:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .indigo-glow:hover {
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+            transform: scale(1.02);
+            transition: all 0.3s ease;
+        }
+        .pdf-mask {
+            mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
+        }
+        .highlight-pulse {
+            animation: pulse-indigo 2s infinite;
+        }
+        @keyframes pulse-indigo {
+            0% { background-color: rgba(99, 102, 241, 0); }
+            50% { background-color: rgba(99, 102, 241, 0.2); }
+            100% { background-color: rgba(99, 102, 241, 0); }
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "inverse-surface": "#dce1fb",
+                      "surface-container-highest": "#2e3447",
+                      "surface-bright": "#33394c",
+                      "on-tertiary-fixed": "#191c1e",
+                      "tertiary": "#c4c7c9",
+                      "on-tertiary-fixed-variant": "#444749",
+                      "inverse-primary": "#494bd6",
+                      "primary": "#c0c1ff",
+                      "primary-fixed": "#e1e0ff",
+                      "surface-container-high": "#23293c",
+                      "on-secondary-fixed-variant": "#005236",
+                      "surface-variant": "#2e3447",
+                      "primary-fixed-dim": "#c0c1ff",
+                      "on-error-container": "#ffdad6",
+                      "error": "#ffb4ab",
+                      "tertiary-container": "#8e9193",
+                      "tertiary-fixed-dim": "#c4c7c9",
+                      "tertiary-fixed": "#e0e3e5",
+                      "secondary-fixed": "#6ffbbe",
+                      "on-secondary-fixed": "#002113",
+                      "on-primary": "#1000a9",
+                      "on-background": "#dce1fb",
+                      "on-primary-container": "#0d0096",
+                      "surface": "#0c1324",
+                      "on-tertiary-container": "#272a2c",
+                      "surface-dim": "#0c1324",
+                      "surface-container-lowest": "#070d1f",
+                      "secondary-container": "#00a572",
+                      "primary-container": "#8083ff",
+                      "on-surface-variant": "#c7c4d7",
+                      "on-error": "#690005",
+                      "outline-variant": "#464554",
+                      "on-surface": "#dce1fb",
+                      "on-primary-fixed": "#07006c",
+                      "on-secondary": "#003824",
+                      "on-secondary-container": "#00311f",
+                      "secondary-fixed-dim": "#4edea3",
+                      "secondary": "#4edea3",
+                      "surface-tint": "#c0c1ff",
+                      "inverse-on-surface": "#2a3043",
+                      "on-tertiary": "#2d3133",
+                      "on-primary-fixed-variant": "#2f2ebe",
+                      "background": "#0c1324",
+                      "error-container": "#93000a",
+                      "surface-container-low": "#151b2d",
+                      "outline": "#908fa0",
+                      "surface-container": "#191f31"
+              },
+              "spacing": {
+                      "stack-md": "16px",
+                      "margin-desktop": "64px",
+                      "margin-mobile": "20px",
+                      "unit": "8px",
+                      "stack-sm": "8px",
+                      "gutter": "32px",
+                      "container-max": "1440px",
+                      "stack-lg": "32px",
+                      "stack-xl": "64px"
+              },
+              "fontFamily": {
+                      "display-lg": ["Playfair Display"],
+                      "body-lg": ["Inter"],
+                      "headline-lg": ["Playfair Display"],
+                      "body-md": ["Inter"],
+                      "display-sm": ["Playfair Display"],
+                      "label-sm": ["Inter"],
+                      "label-md": ["Inter"]
+              }
+            }
+          }
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface font-body-md min-h-screen overflow-hidden selection:bg-primary-container selection:text-on-primary-container">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-white/10 shadow-sm">
+<div class="flex justify-between items-center h-16 px-margin-desktop w-full max-w-container-max mx-auto">
+<div class="flex items-center gap-gutter">
+<span class="font-display-sm text-display-sm font-bold text-primary">BookMind</span>
+<nav class="hidden md:flex gap-8">
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors duration-200" href="#">Home</a>
+<a class="font-label-md text-label-md text-primary font-bold border-b-2 border-primary pb-1" href="#">Library</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors duration-200" href="#">Profile</a>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<button class="active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-primary">search</span>
+</button>
+<button class="active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-primary">bookmark</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-white/20">
+<img alt="User Profile" data-alt="A professional headshot of a person with a serene expression, set against a dark, minimalist background. The lighting is soft and cinematic, highlighting the facial features with a cool, premium aesthetic. The overall mood is sophisticated and clean, matching a luxury digital library interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBb8q4DvCjX5EONdzXO2GAZhGInotgw_r4Zk6QF4M59FglzD-lhNVHYpgxAYlGBOjcdjkqUJv492mTotdy-hMY85AovKUZaC5r4jeVhtKT8QpGUGATA4oRfpdG_qkyg1tkSH3wuavHNlkRUM61njHnH2Q2XbUgOFFe3t7lL9TuZuPakwKha6RayQQQmHnJbeN--9pYNqtf5GfGue8JwMnA8nlbrmHer4u1U1aAwx2raxtm6b8rT-z8HM12rHN-legQ8E2IB14v6KBrT"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Split Screen -->
+<main class="pt-16 h-screen flex flex-col md:flex-row">
+<!-- Left Side: Summary Panel -->
+<section class="w-full md:w-5/12 h-full overflow-y-auto px-margin-desktop py-stack-xl border-r border-white/5 scroll-smooth">
+<div class="max-w-xl mx-auto space-y-stack-xl">
+<header class="space-y-stack-sm">
+<span class="text-primary font-label-md uppercase tracking-widest">Digital Archive • Insights</span>
+<h1 class="font-display-lg text-display-lg text-on-surface leading-tight">Chapter 1 Summary</h1>
+<p class="text-on-surface-variant font-body-lg italic">"The Foundation of Cognitive Mastery"</p>
+</header>
+<!-- Key Ideas Bento-ish Layout -->
+<div class="space-y-stack-lg">
+<h2 class="font-headline-lg text-headline-lg border-b border-primary/20 pb-4">Key Ideas</h2>
+<div class="grid gap-stack-md">
+<div class="glass-panel p-stack-md rounded-xl indigo-glow group cursor-pointer" onclick="highlightPage(1)">
+<div class="flex justify-between items-start mb-2">
+<span class="material-symbols-outlined text-secondary">psychology</span>
+<button class="text-primary text-label-sm font-bold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    GO TO SOURCE <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+<h3 class="font-bold text-on-surface mb-2">Mental Synthesis</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed">The ability to combine disparate concepts into a unified mental model is the cornerstone of high-level retention.</p>
+</div>
+<div class="glass-panel p-stack-md rounded-xl indigo-glow group cursor-pointer" onclick="highlightPage(1)">
+<div class="flex justify-between items-start mb-2">
+<span class="material-symbols-outlined text-secondary">auto_stories</span>
+<button class="text-primary text-label-sm font-bold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    GO TO SOURCE <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+<h3 class="font-bold text-on-surface mb-2">Active Recall Loops</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed">Interrupting the forgetting curve by forcing the brain to retrieve information at increasing intervals.</p>
+</div>
+</div>
+</div>
+<!-- Takeaways -->
+<div class="space-y-stack-lg">
+<h2 class="font-headline-lg text-headline-lg border-b border-primary/20 pb-4">Actionable Takeaways</h2>
+<ul class="space-y-4">
+<li class="flex gap-4">
+<span class="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs flex-shrink-0">01</span>
+<p class="text-on-surface-variant">Dedicate 10 minutes post-reading to write a 3-sentence synthesis from memory.</p>
+</li>
+<li class="flex gap-4">
+<span class="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs flex-shrink-0">02</span>
+<p class="text-on-surface-variant">Identify one "anchor concept" per chapter to link to existing personal knowledge.</p>
+</li>
+<li class="flex gap-4">
+<span class="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs flex-shrink-0">03</span>
+<p class="text-on-surface-variant">Schedule a 24-hour review window for this chapter using a "blind summary" technique.</p>
+</li>
+</ul>
+</div>
+<!-- Footer CTA -->
+<div class="pt-stack-xl">
+<button class="w-full py-4 bg-primary text-on-primary rounded-lg font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined">upgrade</span>
+                        Unlock Premium Flashcards
+                    </button>
+</div>
+</div>
+</section>
+<!-- Right Side: PDF Viewer -->
+<section class="w-full md:w-7/12 h-full bg-surface-container-low relative flex flex-col">
+<!-- PDF Header / Controls -->
+<div class="flex justify-between items-center p-stack-md bg-surface/50 backdrop-blur-md border-b border-white/5">
+<div class="flex items-center gap-4">
+<span class="font-label-md text-on-surface-variant">Original Source • Page 1 of 420</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 hover:bg-white/5 rounded-full transition-colors" onclick="prevPage()">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<div class="px-4 py-1 bg-surface-container-highest rounded-full text-xs font-bold">1</div>
+<button class="p-2 hover:bg-white/5 rounded-full transition-colors" onclick="nextPage()">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+<div class="w-px h-6 bg-white/10 mx-2"></div>
+<button class="p-2 hover:bg-white/5 rounded-full transition-colors">
+<span class="material-symbols-outlined">zoom_in</span>
+</button>
+<button class="p-2 hover:bg-white/5 rounded-full transition-colors">
+<span class="material-symbols-outlined">fullscreen</span>
+</button>
+</div>
+</div>
+<!-- PDF Page Canvas -->
+<div class="flex-grow overflow-y-auto p-12 flex justify-center items-start bg-[#0a0f1d]">
+<div class="w-full max-w-2xl bg-white text-slate-900 p-16 shadow-2xl relative min-h-[1100px] leading-relaxed transition-all duration-500" id="pdf-page">
+<h2 class="text-3xl font-serif font-bold mb-8 text-center">Chapter 1: The Alchemy of Memory</h2>
+<p class="mb-6 first-letter:text-5xl first-letter:font-serif first-letter:float-left first-letter:mr-3">T</p>
+<p class="mb-6">The process of learning is often misunderstood as an act of accumulation. In reality, it is an act of architecture. To truly internalize a concept, one must not simply store it in the cerebral vault; one must weave it into the very fabric of existing neural networks. This is where <span class="transition-colors duration-1000" id="source-highlight">Mental Synthesis</span> becomes the defining characteristic of the master learner.</p>
+<p class="mb-6">Consider the way a master weaver approaches a loom. Each thread represents a fragment of data—a date, a name, a technical definition. In isolation, these threads are fragile. However, when crossed and knotted through the process of synthesis, they form a tapestry capable of withstanding the erosion of time. This chapter explores the methodologies required to transform information into wisdom.</p>
+<div class="my-10 border-y border-slate-200 py-6 italic text-slate-500 text-center">"Wisdom is the residue of information that has survived the fire of critical synthesis."</div>
+<p class="mb-6">Another critical component is the implementation of Active Recall Loops. Modern neurobiology suggests that the brain is a biological engine that thrives on friction. When we force our minds to retrieve information without the aid of external cues, we strengthen the synaptic pathways associated with that memory. It is a form of cognitive weightlifting, where the struggle itself is the catalyst for growth.</p>
+<!-- PDF Watermark -->
+<div class="absolute bottom-8 left-0 right-0 text-center text-slate-300 text-[10px] uppercase tracking-[0.3em] pointer-events-none">BookMind Premium Digital Edition • Non-Redistributable</div>
+</div>
+</div>
+<!-- Page Progress Indicator -->
+<div class="absolute bottom-0 left-0 w-full h-1 bg-surface-container-highest">
+<div class="h-full bg-secondary w-[0.2%]"></div>
+</div>
+</section>
+</main>
+<!-- Navigation Overlay for Mobile -->
+<div class="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-surface/90 backdrop-blur-lg border border-white/10 px-6 py-3 rounded-full shadow-2xl z-50">
+<button class="material-symbols-outlined text-primary">menu_book</button>
+<button class="material-symbols-outlined text-on-surface-variant">note_alt</button>
+<button class="material-symbols-outlined text-on-surface-variant">share</button>
+</div>
+<script>
+        function highlightPage(page) {
+            const highlightTarget = document.getElementById('source-highlight');
+            const pdfContainer = highlightTarget.closest('.overflow-y-auto');
+            
+            // Pulse effect
+            highlightTarget.classList.add('bg-primary/30', 'highlight-pulse', 'rounded', 'px-1');
+            
+            // Scroll to it
+            highlightTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Clear highlight after 3 seconds
+            setTimeout(() => {
+                highlightTarget.classList.remove('bg-primary/30', 'highlight-pulse');
+            }, 3000);
+        }
+
+        function nextPage() {
+            // Simple visual feedback for demonstration
+            const page = document.getElementById('pdf-page');
+            page.style.opacity = '0.5';
+            page.style.transform = 'translateX(20px)';
+            setTimeout(() => {
+                page.style.opacity = '1';
+                page.style.transform = 'translateX(0)';
+            }, 300);
+        }
+
+        function prevPage() {
+            const page = document.getElementById('pdf-page');
+            page.style.opacity = '0.5';
+            page.style.transform = 'translateX(-20px)';
+            setTimeout(() => {
+                page.style.opacity = '1';
+                page.style.transform = 'translateX(0)';
+            }, 300);
+        }
+    </script>
+</body></html>

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BookMind | Atomic Habits Journey</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Playfair+Display:wght@700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.15);
+            border-color: rgba(192, 193, 255, 0.3);
+        }
+        .journey-line {
+            background: linear-gradient(90deg, transparent, #c0c1ff, transparent);
+            background-size: 200% 100%;
+            animation: flow 3s linear infinite;
+        }
+        @keyframes flow {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .node-active {
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+        }
+        body {
+            background-color: #0c1324;
+            color: #dce1fb;
+            overflow-x: hidden;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-surface": "#dce1fb",
+                        "surface-container-highest": "#2e3447",
+                        "surface-bright": "#33394c",
+                        "on-tertiary-fixed": "#191c1e",
+                        "tertiary": "#c4c7c9",
+                        "on-tertiary-fixed-variant": "#444749",
+                        "inverse-primary": "#494bd6",
+                        "primary": "#c0c1ff",
+                        "primary-fixed": "#e1e0ff",
+                        "surface-container-high": "#23293c",
+                        "on-secondary-fixed-variant": "#005236",
+                        "surface-variant": "#2e3447",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "on-error-container": "#ffdad6",
+                        "error": "#ffb4ab",
+                        "tertiary-container": "#8e9193",
+                        "tertiary-fixed-dim": "#c4c7c9",
+                        "tertiary-fixed": "#e0e3e5",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-secondary-fixed": "#002113",
+                        "on-primary": "#1000a9",
+                        "on-background": "#dce1fb",
+                        "on-primary-container": "#0d0096",
+                        "surface": "#0c1324",
+                        "on-tertiary-container": "#272a2c",
+                        "surface-dim": "#0c1324",
+                        "surface-container-lowest": "#070d1f",
+                        "secondary-container": "#00a572",
+                        "primary-container": "#8083ff",
+                        "on-surface-variant": "#c7c4d7",
+                        "on-error": "#690005",
+                        "outline-variant": "#464554",
+                        "on-surface": "#dce1fb",
+                        "on-primary-fixed": "#07006c",
+                        "on-secondary": "#003824",
+                        "on-secondary-container": "#00311f",
+                        "secondary-fixed-dim": "#4edea3",
+                        "secondary": "#4edea3",
+                        "surface-tint": "#c0c1ff",
+                        "inverse-on-surface": "#2a3043",
+                        "on-tertiary": "#2d3133",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "background": "#0c1324",
+                        "error-container": "#93000a",
+                        "surface-container-low": "#151b2d",
+                        "outline": "#908fa0",
+                        "surface-container": "#191f31"
+                    },
+                    "spacing": {
+                        "stack-md": "16px",
+                        "margin-desktop": "64px",
+                        "margin-mobile": "20px",
+                        "unit": "8px",
+                        "stack-sm": "8px",
+                        "gutter": "32px",
+                        "container-max": "1440px",
+                        "stack-lg": "32px",
+                        "stack-xl": "64px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Playfair Display"],
+                        "body-lg": ["Inter"],
+                        "headline-lg": ["Playfair Display"],
+                        "body-md": ["Inter"],
+                        "display-sm": ["Playfair Display"],
+                        "label-sm": ["Inter"],
+                        "label-md": ["Inter"]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-body-md text-on-surface selection:bg-primary/30">
+<!-- SideNavBar (Shared Component) -->
+<aside class="fixed left-0 top-0 h-full w-64 z-50 bg-surface/80 backdrop-blur-xl border-r border-white/10 flex flex-col p-stack-md space-y-stack-md hidden md:flex shadow-lg">
+<div class="mb-stack-xl px-4">
+<h1 class="font-display-sm text-display-sm font-bold text-primary">BookMind</h1>
+<p class="text-label-sm font-label-sm text-on-surface-variant tracking-widest uppercase">Premium Knowledge</p>
+</div>
+<nav class="flex-1 space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-white/5 transition-all duration-200 group rounded-lg" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-primary bg-primary/10 rounded-lg group transition-transform active:scale-98" href="#">
+<span class="material-symbols-outlined">local_library</span>
+<span class="font-label-md text-label-md">Library</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-white/5 transition-all duration-200 group rounded-lg" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+</nav>
+<div class="mt-auto space-y-4">
+<button class="w-full py-3 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:brightness-110 transition-all">
+                Upgrade to Pro
+            </button>
+<div class="pt-4 border-t border-white/5 space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-sm">settings</span>
+<span class="text-label-sm">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-sm">help</span>
+<span class="text-label-sm">Help</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="md:ml-64 min-h-screen px-margin-mobile md:px-margin-desktop py-stack-xl relative overflow-hidden">
+<!-- Ambient Background Gradients -->
+<div class="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full -z-10"></div>
+<div class="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-secondary/5 blur-[100px] rounded-full -z-10"></div>
+<!-- Header Section -->
+<header class="max-w-4xl mx-auto mb-stack-xl text-center md:text-left">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-stack-md">
+<div>
+<span class="text-primary font-label-md tracking-widest uppercase mb-2 block">Interactive Roadmap</span>
+<h2 class="font-display-lg text-display-lg text-on-surface mb-2">Atomic Habits</h2>
+<p class="text-on-surface-variant font-body-lg max-w-xl">
+                        Navigate the layered architecture of behavioral change. Transition from outcome-based goals to identity-centric systems.
+                    </p>
+</div>
+<div class="flex gap-stack-sm justify-center md:justify-start">
+<span class="px-3 py-1 bg-surface-container-high text-secondary text-label-sm rounded-full border border-secondary/20">Learning Path</span>
+<span class="px-3 py-1 bg-surface-container-high text-primary text-label-sm rounded-full border border-primary/20">4 Phases</span>
+</div>
+</div>
+</header>
+<!-- Journey Section -->
+<section class="max-w-5xl mx-auto relative py-stack-lg">
+<!-- Animated Connector Lines (Desktop) -->
+<div class="hidden lg:block absolute top-[140px] left-[10%] right-[10%] h-[2px] journey-line opacity-20 -z-10"></div>
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-gutter relative">
+<!-- Node 1: Identity -->
+<div class="relative group">
+<div class="glass-card p-stack-lg rounded-xl h-full flex flex-col items-center text-center">
+<div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-stack-md group-hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-3xl text-primary" style="font-variation-settings: 'FILL' 1;">person_search</span>
+</div>
+<h3 class="font-headline-lg text-headline-lg mb-stack-sm">Identity</h3>
+<p class="text-on-surface-variant text-label-sm leading-relaxed mb-stack-md">
+                            The deepest layer of change. Decide the type of person you want to be and prove it with small wins.
+                        </p>
+<div class="mt-auto pt-stack-sm border-t border-white/5 w-full text-xs text-primary/60 tracking-tighter uppercase font-bold">Phase 01</div>
+</div>
+</div>
+<!-- Node 2: Habits -->
+<div class="relative group">
+<div class="glass-card p-stack-lg rounded-xl h-full flex flex-col items-center text-center">
+<div class="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mb-stack-md group-hover:bg-secondary/20 transition-colors">
+<span class="material-symbols-outlined text-3xl text-secondary" style="font-variation-settings: 'FILL' 1;">rebase_edit</span>
+</div>
+<h3 class="font-headline-lg text-headline-lg mb-stack-sm">Habits</h3>
+<p class="text-on-surface-variant text-label-sm leading-relaxed mb-stack-md">
+                            The building blocks of change. Master the four laws: Make it obvious, attractive, easy, and satisfying.
+                        </p>
+<div class="mt-auto pt-stack-sm border-t border-white/5 w-full text-xs text-secondary/60 tracking-tighter uppercase font-bold">Phase 02</div>
+</div>
+</div>
+<!-- Node 3: Systems -->
+<div class="relative group">
+<div class="glass-card p-stack-lg rounded-xl h-full flex flex-col items-center text-center">
+<div class="w-16 h-16 rounded-full bg-primary-container/20 flex items-center justify-center mb-stack-md group-hover:bg-primary-container/40 transition-colors">
+<span class="material-symbols-outlined text-3xl text-primary" style="font-variation-settings: 'FILL' 1;">account_tree</span>
+</div>
+<h3 class="font-headline-lg text-headline-lg mb-stack-sm">Systems</h3>
+<p class="text-on-surface-variant text-label-sm leading-relaxed mb-stack-md">
+                            Don't rise to the level of your goals, fall to the level of your systems. Focus on the process, not the finish line.
+                        </p>
+<div class="mt-auto pt-stack-sm border-t border-white/5 w-full text-xs text-primary/60 tracking-tighter uppercase font-bold">Phase 03</div>
+</div>
+</div>
+<!-- Node 4: Results -->
+<div class="relative group">
+<div class="glass-card p-stack-lg rounded-xl h-full flex flex-col items-center text-center border-primary/20 bg-primary/5">
+<div class="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-stack-md group-hover:bg-primary/30 transition-colors node-active">
+<span class="material-symbols-outlined text-3xl text-primary" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<h3 class="font-headline-lg text-headline-lg mb-stack-sm">Results</h3>
+<p class="text-on-surface-variant text-label-sm leading-relaxed mb-stack-md">
+                            The inevitable byproduct of 1% improvements. Exponential growth materialized through consistency.
+                        </p>
+<div class="mt-auto pt-stack-sm border-t border-white/5 w-full text-xs text-primary tracking-tighter uppercase font-bold">Current Target</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Interactive Quote Block -->
+<section class="max-w-4xl mx-auto mt-stack-xl">
+<div class="glass-card p-stack-xl rounded-2xl relative overflow-hidden flex flex-col md:flex-row items-center gap-stack-lg">
+<div class="w-32 h-48 flex-shrink-0 relative">
+<img alt="Atomic Habits Cover" class="w-full h-full object-cover rounded-lg shadow-2xl" data-alt="A high-end, professionally photographed book cover for Atomic Habits by James Clear, standing elegantly on a minimalist dark oak desk. The lighting is moody and cinematic, with a soft indigo rim light that accentuates the book's edges against a deep charcoal background. The composition is clean, representing a luxury digital library aesthetic with sharp focus and premium textures." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB7hbkpu6BGr3e9yVu2iEMPww8wTGnaMtxDS7rlbYSM9e45uOnK12XWDPOt1CxN-h9YOnQq5HNw-__g4xHGiFfWWWQ5HQnlRrWKUYqsFayp7ANvx5hFAAjaW6Cr8JspUo9b0hEXMjqGQSBJMccbXrkmSFJip0hfdj20YxAXSXGMloELUYZovzIrb38N2U4XLSSvqpAJ61JJI-TaL3g9TstGJiXmkb6IU87s6JJ88fuL1JWM6VkJ3jagju3IUFL4vCyHco9etlnUGauw"/>
+<div class="absolute inset-0 rounded-lg ring-1 ring-white/10"></div>
+</div>
+<div class="flex-1 text-center md:text-left">
+<span class="material-symbols-outlined text-primary/40 text-4xl mb-2">format_quote</span>
+<blockquote class="font-display-sm text-display-sm italic mb-4 text-on-surface">
+                        "Every action you take is a vote for the type of person you wish to become."
+                    </blockquote>
+<cite class="text-label-md font-label-md text-primary">— James Clear, Atomic Habits</cite>
+</div>
+</div>
+</section>
+<!-- Progress Tracking -->
+<section class="max-w-5xl mx-auto mt-stack-xl grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<div class="glass-card p-stack-md rounded-xl">
+<div class="flex justify-between items-center mb-2">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Journey Progress</span>
+<span class="text-label-sm font-label-sm text-secondary">75%</span>
+</div>
+<div class="h-1 w-full bg-surface-container-highest rounded-none overflow-hidden">
+<div class="h-full bg-secondary transition-all duration-1000" style="width: 75%;"></div>
+</div>
+</div>
+<div class="glass-card p-stack-md rounded-xl flex items-center justify-between">
+<div>
+<p class="text-label-sm text-on-surface-variant">Identity Shifts</p>
+<p class="font-headline-lg text-primary">12 Active</p>
+</div>
+<span class="material-symbols-outlined text-primary/40">fingerprint</span>
+</div>
+<div class="glass-card p-stack-md rounded-xl flex items-center justify-between">
+<div>
+<p class="text-label-sm text-on-surface-variant">System Reliability</p>
+<p class="font-headline-lg text-secondary">92%</p>
+</div>
+<span class="material-symbols-outlined text-secondary/40">query_stats</span>
+</div>
+</section>
+</main>
+<!-- Micro-interactions Script -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.glass-card');
+            
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    // Slight atmospheric sound effect could go here
+                });
+            });
+
+            // Smooth entrance animation for nodes
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry, index) => {
+                    if (entry.isIntersecting) {
+                        setTimeout(() => {
+                            entry.target.classList.add('opacity-100', 'translate-y-0');
+                            entry.target.classList.remove('opacity-0', 'translate-y-10');
+                        }, index * 150);
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            document.querySelectorAll('.group').forEach(el => {
+                el.classList.add('opacity-0', 'translate-y-10', 'transition-all', 'duration-700');
+                observer.observe(el);
+            });
+        });
+    </script>
+</body></html>

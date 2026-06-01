@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BookMind Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Playfair+Display:wght@700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;family=Playfair+Display:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+            border-color: rgba(192, 193, 255, 0.3);
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-surface": "#dce1fb",
+                        "surface-container-highest": "#2e3447",
+                        "surface-bright": "#33394c",
+                        "on-tertiary-fixed": "#191c1e",
+                        "tertiary": "#c4c7c9",
+                        "on-tertiary-fixed-variant": "#444749",
+                        "inverse-primary": "#494bd6",
+                        "primary": "#c0c1ff",
+                        "primary-fixed": "#e1e0ff",
+                        "surface-container-high": "#23293c",
+                        "on-secondary-fixed-variant": "#005236",
+                        "surface-variant": "#2e3447",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "on-error-container": "#ffdad6",
+                        "error": "#ffb4ab",
+                        "tertiary-container": "#8e9193",
+                        "tertiary-fixed-dim": "#c4c7c9",
+                        "tertiary-fixed": "#e0e3e5",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-secondary-fixed": "#002113",
+                        "on-primary": "#1000a9",
+                        "on-background": "#dce1fb",
+                        "on-primary-container": "#0d0096",
+                        "surface": "#0c1324",
+                        "on-tertiary-container": "#272a2c",
+                        "surface-dim": "#0c1324",
+                        "surface-container-lowest": "#070d1f",
+                        "secondary-container": "#00a572",
+                        "primary-container": "#8083ff",
+                        "on-surface-variant": "#c7c4d7",
+                        "on-error": "#690005",
+                        "outline-variant": "#464554",
+                        "on-surface": "#dce1fb",
+                        "on-primary-fixed": "#07006c",
+                        "on-secondary": "#003824",
+                        "on-secondary-container": "#00311f",
+                        "secondary-fixed-dim": "#4edea3",
+                        "secondary": "#4edea3",
+                        "surface-tint": "#c0c1ff",
+                        "inverse-on-surface": "#2a3043",
+                        "on-tertiary": "#2d3133",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "background": "#0c1324",
+                        "error-container": "#93000a",
+                        "surface-container-low": "#151b2d",
+                        "outline": "#908fa0",
+                        "surface-container": "#191f31"
+                    },
+                    "spacing": {
+                        "stack-md": "16px",
+                        "margin-desktop": "64px",
+                        "margin-mobile": "20px",
+                        "unit": "8px",
+                        "stack-sm": "8px",
+                        "gutter": "32px",
+                        "container-max": "1440px",
+                        "stack-lg": "32px",
+                        "stack-xl": "64px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Playfair Display"],
+                        "body-lg": ["Inter"],
+                        "headline-lg": ["Playfair Display"],
+                        "body-md": ["Inter"],
+                        "display-sm": ["Playfair Display"],
+                        "label-sm": ["Inter"],
+                        "label-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "headline-lg": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                        "display-sm": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "label-sm": ["12px", {"lineHeight": "1", "fontWeight": "500"}],
+                        "label-md": ["14px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background selection:bg-primary/30 selection:text-primary">
+<!-- SideNavBar (Shared Component) -->
+<aside class="fixed left-0 top-0 h-full w-64 z-50 bg-surface/80 backdrop-blur-xl dark:bg-surface/80 border-r border-white/10 flex flex-col p-stack-md space-y-stack-md shadow-lg hidden md:flex">
+<div class="flex items-center space-x-3 px-2 py-4">
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container">local_library</span>
+</div>
+<div>
+<h1 class="font-display-sm text-[20px] font-bold text-primary dark:text-primary leading-none">BookMind</h1>
+<p class="text-[12px] text-on-surface-variant font-medium opacity-70">Premium Knowledge</p>
+</div>
+</div>
+<nav class="flex-grow space-y-2 pt-4">
+<a class="flex items-center space-x-4 px-4 py-3 text-on-surface-variant hover:bg-white/5 transition-all duration-200 group active:scale-98" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</a>
+<!-- Active State Library -->
+<a class="flex items-center space-x-4 px-4 py-3 text-primary bg-primary/10 rounded-lg transition-all duration-200 active:scale-98" href="#">
+<span class="material-symbols-outlined">local_library</span>
+<span class="font-label-md text-label-md">Library</span>
+</a>
+<a class="flex items-center space-x-4 px-4 py-3 text-on-surface-variant hover:bg-white/5 transition-all duration-200 group active:scale-98" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+</nav>
+<div class="pt-8 border-t border-white/5 space-y-2">
+<a class="flex items-center space-x-4 px-4 py-3 text-on-surface-variant hover:bg-white/5 transition-all duration-200 group active:scale-98" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+<a class="flex items-center space-x-4 px-4 py-3 text-on-surface-variant hover:bg-white/5 transition-all duration-200 group active:scale-98" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">help</span>
+<span class="font-label-md text-label-md">Help</span>
+</a>
+</div>
+<div class="mt-auto p-4 bg-primary/5 rounded-2xl border border-primary/10">
+<p class="text-label-sm text-primary mb-3">Elevate your mind</p>
+<button class="w-full py-2.5 bg-primary text-on-primary font-label-md text-label-md rounded-lg active:scale-95 transition-transform">
+                Upgrade to Pro
+            </button>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="md:ml-64 min-h-screen">
+<!-- Top Search & Actions -->
+<header class="sticky top-0 w-full z-40 bg-surface/60 backdrop-blur-2xl px-margin-desktop h-20 flex justify-between items-center border-b border-white/5">
+<div class="relative w-full max-w-xl">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/50">search</span>
+<input class="w-full bg-surface-container-low border-none border-b-2 border-transparent focus:border-primary focus:ring-0 text-on-surface text-label-md px-12 py-3 transition-all" placeholder="Search your knowledge library..." type="text"/>
+</div>
+<div class="flex items-center space-x-stack-md">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">bookmark</span>
+</button>
+<div class="w-10 h-10 rounded-full bg-surface-container-highest border border-white/10 overflow-hidden">
+<img alt="User" class="w-full h-full object-cover" data-alt="A professional headshot of a person with a friendly expression, captured with soft studio lighting that creates a clean, premium look. The background is a muted, deep slate grey consistent with a high-end digital platform's dark mode aesthetic. The skin tones are warm and the focus is sharp, emphasizing a modern and approachable user profile image." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAaez5ZNoWBxNYfozg_IDQixyevaY8RwRSH9bGDmA2mWcL6VZoUb4_piLD6aeIi9U9tq9B2YsUS3rwZCUOsPZmY2IbeKM-6fFAoouxCLPTEuZySMiBulzLfNRmtlO_SSDUVypUcA62t7_ggb1MlDkva2KTgY1-gYD9rJFZi8ipisg2Mx_jQEPy1XJgrKJ16ApV5ePJpCsyjx7ZTAq92_1Gq_D26pImegwZSoEBr4TITap0ZNfOVpVK28XvnhMQPH6bvha21KXjF2MYx"/>
+</div>
+</div>
+</header>
+<!-- Library Content -->
+<section class="p-margin-desktop space-y-stack-xl max-w-container-max mx-auto">
+<!-- Filters & Headline -->
+<div class="space-y-stack-md">
+<h2 class="font-display-lg text-display-lg text-on-surface">Your Library</h2>
+<div class="flex flex-wrap gap-stack-sm pt-4">
+<button class="px-6 py-2 rounded-full bg-primary text-on-primary font-label-md text-label-md transition-all">
+                        Recently Read
+                    </button>
+<button class="px-6 py-2 rounded-full bg-surface-container-high border border-white/10 text-on-surface-variant font-label-md text-label-md hover:border-primary/50 transition-all">
+                        Completed
+                    </button>
+<button class="px-6 py-2 rounded-full bg-surface-container-high border border-white/10 text-on-surface-variant font-label-md text-label-md hover:border-primary/50 transition-all">
+                        Favorite Concepts
+                    </button>
+<button class="px-6 py-2 rounded-full bg-surface-container-high border border-white/10 text-on-surface-variant font-label-md text-label-md hover:border-primary/50 transition-all">
+                        Wishlist
+                    </button>
+</div>
+</div>
+<!-- Bento/Grid Showcase -->
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-gutter">
+<!-- Card 1 -->
+<div class="group relative aspect-[2/3] glass-card rounded-xl overflow-hidden cursor-pointer">
+<img alt="Book Cover" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" data-alt="A minimalist book cover for a title about modern philosophy, featuring clean sans-serif typography on a deep indigo background with an abstract geometric gold foil icon in the center. The lighting is soft and cinematic, emphasizing the texture of the matte paper and the shimmering gold. The aesthetic is sophisticated and intellectual, fitting a luxury digital library." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBFIRUto1g7TNbawqhmf6sz5YM1y87_8Tdkety1yUQwjr_Wjy4ERcLnriwlDdmCkgsdAIQhOmNHx6YFME6DI8CQpKDiabDvlM1Abb10wPPRHRikn--0GWmRz0g6EJ-b89xEkR5xWY2_EclSsivYioMF5GJ0-c2O08_QcR46p8mGGMpSERmmGawjAqfZZqRC5KNNGocce-c8Ikj59pRwYyJLhozi8AYZp0zRQXXA3_H3XvMBYqc8s8lfOCPxHni8F9FpcrPKJ8a4iAyk"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/40 to-transparent"></div>
+<div class="absolute bottom-0 left-0 right-0 p-stack-md space-y-2">
+<div class="flex gap-1.5">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">1m</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary border border-primary/30">Science</span>
+</div>
+<h3 class="font-headline-lg text-[18px] text-white line-clamp-2">The Architecture of Time</h3>
+<p class="text-label-sm text-on-surface-variant font-medium">Julian Barbour</p>
+<div class="w-full h-1 bg-white/10 mt-2">
+<div class="h-full bg-emerald-500 w-[65%]"></div>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group relative aspect-[2/3] glass-card rounded-xl overflow-hidden cursor-pointer">
+<img alt="Book Cover" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" data-alt="A striking book cover featuring a high-contrast black and white photograph of a dense forest with a single glowing indigo light deep in the center. The title is embossed in elegant serif typography with a slight metallic sheen. The overall atmosphere is mysterious and immersive, illuminated by a soft digital glow that complements a dark mode interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxAKSUXEZoKJqMSuK-g8-jdnKJaUyt2kwP933m-caZ-g9o8r5qfvGnxqFmeEfXJKlOfVFTgdsjPkvSHJb2E5I15xuxK3AcW4OQfhGBFsPvKJv-1lyYLXYLVjP0h7WY24Abkh3iHlVdB_RjpHOdLVyvamt1cCUa3AzIqnq15e_qMZA9HjhaSZ6ophXBzXJAo2tRgZ0Hfv4tWkHW5vOPLetHwtYqIkSDIl1NnizUcCRilKoLoIe_Hk1zP8O0J0DoYBd8Hp7mE8-1vvSY"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/40 to-transparent"></div>
+<div class="absolute bottom-0 left-0 right-0 p-stack-md space-y-2">
+<div class="flex gap-1.5">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">10m</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary border border-primary/30">History</span>
+</div>
+<h3 class="font-headline-lg text-[18px] text-white line-clamp-2">Echoes of the Silk Road</h3>
+<p class="text-label-sm text-on-surface-variant font-medium">Valerie Hansen</p>
+<div class="w-full h-1 bg-white/10 mt-2">
+<div class="h-full bg-emerald-500 w-[100%]"></div>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="group relative aspect-[2/3] glass-card rounded-xl overflow-hidden cursor-pointer">
+<img alt="Book Cover" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" data-alt="An abstract book cover design with flowing liquid textures in shades of deep violet and electric blue. A central, stark white minimal symbol representing a neural network is prominently displayed. The image has a futuristic, high-tech feel with subtle grain and light leaks, suggesting advanced cognitive science and intellectual exploration." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAp4XnMHMzVVeCxtKfBkf3c4-5Dys_m4fKbRL8e6yCXfr1oTL9KzB-yHMtYU8OqGeSnC4eL5_Et3mf0TeUm8GmVVtZMK3_Z6Rsu9oqTDPVxbWyTgDFMurwMHx7Jyc3NS0YjDW41TWk32442RPjMkAcN22_gcxoZgtLf0YbABfwj0_914FqaA0usVaYur61ZdtVZJk39W4xf9rOWXVJTIg6RQad-voD3n7x95wEJR31vo49SpixtWS9q936BwAHvQfaBLUhSixA9yH8D"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/40 to-transparent"></div>
+<div class="absolute bottom-0 left-0 right-0 p-stack-md space-y-2">
+<div class="flex gap-1.5">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">30m</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary border border-primary/30">Mind</span>
+</div>
+<h3 class="font-headline-lg text-[18px] text-white line-clamp-2">Neural Pathways</h3>
+<p class="text-label-sm text-on-surface-variant font-medium">Dr. Elena Rostova</p>
+<div class="w-full h-1 bg-white/10 mt-2">
+<div class="h-full bg-emerald-500 w-[12%]"></div>
+</div>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="group relative aspect-[2/3] glass-card rounded-xl overflow-hidden cursor-pointer">
+<img alt="Book Cover" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" data-alt="A clean and modern book cover featuring a single architectural element—a spiral staircase made of white marble against a dark, moody background. The composition is balanced and artistic, reflecting themes of progress and structured learning. The lighting is dramatic and directional, creating deep shadows and bright highlights that pop in a dark mode UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKVqCgryzsGFZLODEQqXlieSxK5WDILJItZ7wkLg4CiUS1ejc6YVDtfIvgUMsNYw8Qp0HsHh4jYc8ena42mNmANIysvcIPgtgLROVTcFrzcMGNjXd8HEXtkKKNBOW1zioVqDl6aLi-Lb7EYMzTwfiWhZjJl45ehcNtIFHpf2hWtpg8N9eJdUxdBt7YDCndk4CFGETKl44au8MpSBA8ENqKI-da2qot4ECiWf8eAJbzhjolhfOuEz68-2nj9TrwN40D8IWHXIOm33Oy"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/40 to-transparent"></div>
+<div class="absolute bottom-0 left-0 right-0 p-stack-md space-y-2">
+<div class="flex gap-1.5">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">1m</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary border border-primary/30">Design</span>
+</div>
+<h3 class="font-headline-lg text-[18px] text-white line-clamp-2">The Minimalist Manifesto</h3>
+<p class="text-label-sm text-on-surface-variant font-medium">Hiroshi Nakamura</p>
+<div class="w-full h-1 bg-white/10 mt-2">
+<div class="h-full bg-emerald-500 w-[88%]"></div>
+</div>
+</div>
+</div>
+<!-- Card 5 -->
+<div class="group relative aspect-[2/3] glass-card rounded-xl overflow-hidden cursor-pointer">
+<img alt="Book Cover" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" data-alt="A classic book cover aesthetic reimagined for a digital era. A richly textured leather-bound book texture is overlaid with vibrant, neon-indigo digital glitch effects. The title is set in a bold, modern serif font that cuts through the visual noise. The mood is a fusion of heritage and future tech, perfect for a premium knowledge platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCBVBOUjJBDkNQjmJHRyRU2P1dsi6wodbPWPA9bvBzZovWwE28yQjt5aW8tAo2ybeaJBpM21V3DVuOvjsP3aT3t56TnGiYyI8CMOcuHAGNKm402KeZRHps-guUv1TquqdDfOPgcvk49AK7uxmpoctrQV5DP3xq4SjkSt76lqRT4a6AQi5ZF8B74-DqV_5D_Ynb0dzoMDLWSqwQvrg2jVza1NSSmz-12B0AxmwAIXYfeKfIRszWW9VS4SY-1OC7OdKWjGJg4mzB6sl9T"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/40 to-transparent"></div>
+<div class="absolute bottom-0 left-0 right-0 p-stack-md space-y-2">
+<div class="flex gap-1.5">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">10m</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary border border-primary/30">Culture</span>
+</div>
+<h3 class="font-headline-lg text-[18px] text-white line-clamp-2">Digital Stoicism</h3>
+<p class="text-label-sm text-on-surface-variant font-medium">Marcus Aurelius Jr.</p>
+<div class="w-full h-1 bg-white/10 mt-2">
+<div class="h-full bg-emerald-500 w-[45%]"></div>
+</div>
+</div>
+</div>
+<!-- More cards can be added here following the same structure -->
+</div>
+<!-- Horizontal Scrolling Tracks (Netflix-Style) -->
+<section class="pt-stack-xl space-y-stack-md">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-lg text-headline-lg text-on-surface">Recommended for You</h3>
+<button class="text-primary font-label-md text-label-md hover:underline">View all</button>
+</div>
+<div class="flex space-x-gutter overflow-x-auto no-scrollbar pb-8 -mx-4 px-4">
+<!-- Recommendation Card 1 -->
+<div class="min-w-[220px] group cursor-pointer space-y-3">
+<div class="aspect-[2/3] rounded-xl overflow-hidden glass-card">
+<img alt="Cover" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A lush, detailed botanical illustration of a rare tropical plant on a dark, charcoal-colored background. The colors are vibrant—deep greens and rich magentas—rendered with high precision and soft lighting that emphasizes natural beauty. This aesthetic conveys deep ecological knowledge and high-end scientific research in a luxury interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCf5dvA--bhv8MVKDN6bd8zWf-kA7uFop9pwwgdUeBDYlCCm0z2Fr9KYtaFdJMue5b_tZCuGVux3r86AhPnJlj2MLrIv-jTpwvE5EZXA687Txh3T9jBZbFG_y7Rq4Nzdw2bdKMGPEYFb3_sy6dkj796Z69HnnKR-0aI-rBfnD_fyUufcf6HkLQKQgQQigwdgQT6cJv1pnDNrIjXZ8l2xMQlZK94Bmr4N7iSHMEFpIg8YdLRcvAMYdVOCiUsb5amag-TZZRmer_DwuDM"/>
+</div>
+<div>
+<h4 class="text-white font-label-md text-label-md truncate">The Language of Plants</h4>
+<p class="text-label-sm text-on-surface-variant">Suzanne Simard</p>
+</div>
+</div>
+<!-- Recommendation Card 2 -->
+<div class="min-w-[220px] group cursor-pointer space-y-3">
+<div class="aspect-[2/3] rounded-xl overflow-hidden glass-card">
+<img alt="Cover" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A stunning satellite view of Earth at night, with glowing city lights forming intricate golden networks against a deep navy blue ocean. The image is crisp and cinematic, capturing the global scale of human connectivity. The color palette is dominated by dark blues and warm gold accents, evoking a sense of wonder and global perspective." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJEu4AEU16M1eAHpBU65IcNlNFyS5MojhORRzXRD02by8ldi4IGdtGCXktOAxH3BQ8RRGkRe66ZHQTKJ6vVmPDM2wBOXWjaNnQUDUDPTAlW2USi4QddwYsjyO_I5sbVr1Qu1Kfvem8aNRXzTFjmul4YCJxOJQBofk8WiY23VRIrd02NT62x9erc-LLOBKvINOrTJG5I-Wr9pK81-Jiu5vPnjvOu9_DbG9nF2-_YKs71UZUawtBQy-JCM_XhTuooxzzmwTo27mwbJG1"/>
+</div>
+<div>
+<h4 class="text-white font-label-md text-label-md truncate">Infinite Connectivity</h4>
+<p class="text-label-sm text-on-surface-variant">Parag Khanna</p>
+</div>
+</div>
+<!-- Recommendation Card 3 -->
+<div class="min-w-[220px] group cursor-pointer space-y-3">
+<div class="aspect-[2/3] rounded-xl overflow-hidden glass-card">
+<img alt="Cover" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A high-contrast macro photograph of a laboratory's glass equipment, with soft indigo and cyan light refracting through the curves of a flask. The setting is sterile yet technologically advanced, suggesting cutting-edge scientific inquiry. The focus is sharp on the light's reflection, creating a sleek, professional, and high-tech visual for a knowledge platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAlAlEM-zfmhBOxxbKghsSwRPMTPmn6DNaCc1bf_QXoCbJ_jnHPG4IjKqkPdaJvw1BxnNGdcxLBCLbyS86zAOFw4nKEy3cMvVg0QYDgvynalilOZaJsL85a2NJh3fbJgM3VF7X-gGwY-hjgkV7cAM4QQ-22IqemhKUlBN7YnSwVUjwq4YPUlT6k7bWHI9lYYoYsE9lA_hMY1ovQINrwVwd7p-RO-p9L5HLlUGzDptrOzVKAErQPdXSXwJK7rO9HDFabJMYwFO97konJ"/>
+</div>
+<div>
+<h4 class="text-white font-label-md text-label-md truncate">The Alchemy of Logic</h4>
+<p class="text-label-sm text-on-surface-variant">John von Neumann</p>
+</div>
+</div>
+<!-- Recommendation Card 4 -->
+<div class="min-w-[220px] group cursor-pointer space-y-3">
+<div class="aspect-[2/3] rounded-xl overflow-hidden glass-card">
+<img alt="Cover" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A macro shot of a weathered vintage book spine with faded gold-leaf lettering against a dark, velvet-like background. The lighting is dramatic, highlighting the texture of the old paper and the metallic flakes of the gold. This image bridges traditional literacy with high-end digital design, symbolizing the preservation of knowledge in a modern format." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB6_baUnz9sX4LluCZlWKfUMZ00Yek9T2onssaVqVQfDP0V4FA8WWYlAYqHDCn6DSJAqZPGHnm_660RLsw1UG2vfC9YFq2CVbSpyDT74iYEMsojD08L8L347YNW_zHgwsnt4b2h_reM8syKooi7pSnH56JT_m_djQFjJ7clrnGWxJCCe1NDNtykYxcixapExxyeKQEG42GVli96RrS3hDc56rk6Ara0M3BD1z_WLS3ig0vwO-cd8l8XV823GfUzYvv7-N3jxLzfPZ1t"/>
+</div>
+<div>
+<h4 class="text-white font-label-md text-label-md truncate">Wisdom of the Ages</h4>
+<p class="text-label-sm text-on-surface-variant">Will Durant</p>
+</div>
+</div>
+<!-- Recommendation Card 5 -->
+<div class="min-w-[220px] group cursor-pointer space-y-3">
+<div class="aspect-[2/3] rounded-xl overflow-hidden glass-card">
+<img alt="Cover" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A serene, minimalist desert landscape at dusk, with the sky showing a soft gradient from deep indigo to warm coral. A single, perfectly straight road disappears into the horizon. The lighting is soft and ethereal, conveying a sense of journey, clarity, and intellectual focus. The colors are sophisticated and clean, matching a premium dark-mode aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6lIBEnPeKyX0y3lwTbLm3L_CwK6U2Ciu9CIllI9FjhHnNU0mhSM1YJ9qqssA9_a4tJA8JtAezZzKC_1-0NyRMApueD8Kop7JAtEHmDr703fhY0PPCaa2stB5eUtOD9ZiI5qRSS7CGP4sKtAa_MrXJNztDQB_XvsS0dO4xK7es_srKjhUfcX6uauRZqjDgZzmonxl-u43A_a9Ro1ESQ-MP50_FIK3AuKpYYerxjpfFN30Y4UI0UJrww719k6DNvctHlFBU0HmiH1s0"/>
+</div>
+<div>
+<h4 class="text-white font-label-md text-label-md truncate">The Long Horizon</h4>
+<p class="text-label-sm text-on-surface-variant">Rebecca Solnit</p>
+</div>
+</div>
+</div>
+</section>
+</section>
+<!-- Bottom NavBar (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full h-16 bg-surface/80 backdrop-blur-xl border-t border-white/10 md:hidden flex justify-around items-center z-50">
+<a class="flex flex-col items-center justify-center space-y-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center space-y-1 text-primary" href="#">
+<span class="material-symbols-outlined">local_library</span>
+<span class="text-[10px] font-bold">Library</span>
+</a>
+<a class="flex flex-col items-center justify-center space-y-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">search</span>
+<span class="text-[10px] font-medium">Explore</span>
+</a>
+<a class="flex flex-col items-center justify-center space-y-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</a>
+</nav>
+</main>
+<!-- Micro-interaction Script -->
+<script>
+        document.querySelectorAll('.glass-card').forEach(card => {
+            card.addEventListener('mousemove', e => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+        });
+
+        // Filter toggle simulation
+        const filterButtons = document.querySelectorAll('button[class*="px-6"]');
+        filterButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterButtons.forEach(b => {
+                    b.classList.remove('bg-primary', 'text-on-primary');
+                    b.classList.add('bg-surface-container-high', 'text-on-surface-variant');
+                });
+                btn.classList.add('bg-primary', 'text-on-primary');
+                btn.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+            });
+        });
+    </script>
+</body></html>
