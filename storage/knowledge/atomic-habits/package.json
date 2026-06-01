@@ -1,0 +1,277 @@
+{
+  "book": {
+    "slug": "atomic-habits",
+    "title": "Atomic Habits",
+    "author": "James Clear",
+    "category": "Behavior Change",
+    "cover": "atomic-habits",
+    "readingTime": "5h 20m",
+    "status": "ready",
+    "progress": 68,
+    "addedAt": "2026-06-01",
+    "pdfPath": ""
+  },
+  "thesis": "Tiny, repeatable improvements compound into remarkable outcomes when they are attached to identity, supported by systems, and made obvious, attractive, easy, and satisfying.",
+  "framework": "Cue, craving, response, and reward become the habit loop. The Four Laws reshape that loop: make it obvious, attractive, easy, and satisfying.",
+  "overview": [
+    "Atomic Habits argues that outcomes are lagging measures of systems. Durable change starts by improving the system that produces behavior.",
+    "The deepest layer of change is identity. Instead of asking what result you want, ask who you want to become and cast votes for that identity through repeated action.",
+    "Environment design matters because disciplined people often build surroundings that make good behavior easier and bad behavior harder."
+  ],
+  "learningModes": [
+    {
+      "slug": "1",
+      "label": "Flash",
+      "title": "Learn in 1 Minute",
+      "duration": "1 min",
+      "summary": "The book is a practical system for making small behaviors compound.",
+      "sections": [
+        {
+          "title": "Book Thesis",
+          "items": [
+            "Small habits compound into large life changes.",
+            "Identity-based habits outlast outcome-based goals.",
+            "Systems beat motivation because they shape default behavior."
+          ]
+        },
+        {
+          "title": "Top Lessons",
+          "items": [
+            "Make good habits obvious, attractive, easy, and satisfying.",
+            "Make bad habits invisible, unattractive, difficult, and unsatisfying.",
+            "Never miss twice; protect the identity even after a slip."
+          ]
+        },
+        {
+          "title": "Who Should Read It",
+          "items": [
+            "Anyone trying to build a routine.",
+            "People who repeatedly set goals but lose momentum.",
+            "Leaders designing behavior-friendly environments."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "10",
+      "label": "Core",
+      "title": "Learn in 10 Minutes",
+      "duration": "10 min",
+      "summary": "Understand the habit loop and the Four Laws of Behavior Change.",
+      "sections": [
+        {
+          "title": "Core Framework",
+          "items": [
+            "Cue creates awareness.",
+            "Craving creates desire.",
+            "Response is the behavior.",
+            "Reward teaches the brain to repeat it."
+          ]
+        },
+        {
+          "title": "Main Concepts",
+          "items": [
+            "Identity-based habits",
+            "Habit stacking",
+            "Environment design",
+            "Two-minute rule",
+            "Habit tracking"
+          ]
+        },
+        {
+          "title": "Key Examples",
+          "items": [
+            "British Cycling improved many small details until the gains compounded.",
+            "A habit scorecard exposes invisible behaviors.",
+            "Putting a guitar in the middle of the room makes practice more likely."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "30",
+      "label": "Deep",
+      "title": "Learn in 30 Minutes",
+      "duration": "30 min",
+      "summary": "Connect the book's mental models, stories, examples, and actions.",
+      "sections": [
+        {
+          "title": "Detailed Understanding",
+          "items": [
+            "Outcomes come from systems, systems come from repeated behavior, and repeated behavior comes from identity and environment.",
+            "The plateau of latent potential explains why progress feels delayed before visible results appear.",
+            "Behavior is easier to change when the desired action is the path of least resistance."
+          ]
+        },
+        {
+          "title": "Mental Models",
+          "items": [
+            "Compounding",
+            "Feedback loops",
+            "Friction",
+            "Identity voting",
+            "Inversion"
+          ]
+        },
+        {
+          "title": "Action Items",
+          "items": [
+            "Choose one identity and one daily vote for it.",
+            "Design your room, desk, or phone to make the cue obvious.",
+            "Track the habit and recover immediately after misses."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "full",
+      "label": "Library",
+      "title": "Full Depth",
+      "duration": "Full",
+      "summary": "Explore the complete generated knowledge package.",
+      "sections": [
+        {
+          "title": "Includes",
+          "items": [
+            "Overview, journey, contents, chapters, concepts, examples, actions, and source reading.",
+            "Chapter-level summaries preserve stories, examples, and practical takeaways.",
+            "Concept-first learning lets users move through the ideas without following page order."
+          ]
+        }
+      ]
+    }
+  ],
+  "journey": [
+    {
+      "title": "Identity",
+      "description": "Decide who you want to become before choosing the habit."
+    },
+    {
+      "title": "Systems",
+      "description": "Build repeatable defaults that make the desired behavior easier."
+    },
+    {
+      "title": "Habit Loop",
+      "description": "Shape cue, craving, response, and reward."
+    },
+    {
+      "title": "Environment",
+      "description": "Make cues visible and remove friction from good actions."
+    },
+    {
+      "title": "Compounding",
+      "description": "Let small improvements accumulate until outcomes become visible."
+    }
+  ],
+  "contents": [
+    {
+      "title": "Part 1: The Fundamentals",
+      "chapters": [
+        "The Surprising Power of Atomic Habits",
+        "How Your Habits Shape Your Identity",
+        "How to Build Better Habits in 4 Simple Steps"
+      ]
+    },
+    {
+      "title": "Part 2: Make It Obvious",
+      "chapters": [
+        "The Man Who Didn't Look Right",
+        "The Best Way to Start a New Habit",
+        "Motivation Is Overrated; Environment Often Matters More"
+      ]
+    },
+    {
+      "title": "Part 3: Make It Attractive, Easy, and Satisfying",
+      "chapters": [
+        "How to Make a Habit Irresistible",
+        "Walk Slowly, but Never Backward",
+        "The Cardinal Rule of Behavior Change"
+      ]
+    }
+  ],
+  "chapters": [
+    {
+      "title": "The Surprising Power of Atomic Habits",
+      "summary": "Small improvements are easy to dismiss in the moment but become meaningful through compounding.",
+      "keyIdeas": ["One percent better compounds", "Systems create outcomes", "Delayed results hide progress"],
+      "examples": ["British Cycling's aggregation of marginal gains"],
+      "actionItems": ["Pick one tiny behavior that can be repeated daily"]
+    },
+    {
+      "title": "How Your Habits Shape Your Identity",
+      "summary": "Identity-based change asks users to become the type of person who performs the behavior.",
+      "keyIdeas": ["Outcomes, processes, identity", "Every action is a vote", "Identity gives habits staying power"],
+      "examples": ["A person who sees themselves as a reader makes reading a default behavior"],
+      "actionItems": ["Write the identity behind one goal"]
+    },
+    {
+      "title": "How to Build Better Habits in 4 Simple Steps",
+      "summary": "The habit loop can be designed through four laws and inverted to break unwanted habits.",
+      "keyIdeas": ["Cue", "Craving", "Response", "Reward"],
+      "examples": ["Habit stacking attaches a new action to an existing cue"],
+      "actionItems": ["Create one habit stack using: After I do X, I will do Y"]
+    }
+  ],
+  "concepts": [
+    {
+      "title": "Identity-Based Habits",
+      "description": "Behavior change that starts with the person you want to become.",
+      "whyItMatters": "Identity keeps habits from depending only on mood, goals, or deadlines."
+    },
+    {
+      "title": "The Four Laws",
+      "description": "Make it obvious, attractive, easy, and satisfying.",
+      "whyItMatters": "The laws turn habit formation into a design problem."
+    },
+    {
+      "title": "Environment Design",
+      "description": "Arrange surroundings so cues and friction guide behavior.",
+      "whyItMatters": "The room often wins against willpower."
+    },
+    {
+      "title": "Two-Minute Rule",
+      "description": "Scale a new habit down until it can be started in two minutes.",
+      "whyItMatters": "Starting is the gateway behavior."
+    }
+  ],
+  "examples": [
+    {
+      "concept": "Compounding",
+      "authorExample": "British Cycling improved many small inputs until the combined advantage became decisive.",
+      "story": "The team focused on tiny optimizations across training, equipment, recovery, and routine.",
+      "modernExample": "A learner reads two pages daily, then compounds vocabulary, focus, and confidence.",
+      "personalApplication": "Choose one improvement small enough to repeat without negotiation."
+    },
+    {
+      "concept": "Environment Design",
+      "authorExample": "Keeping a guitar visible makes practice more likely than storing it in a closet.",
+      "story": "The cue becomes part of the room instead of an item that must be remembered.",
+      "modernExample": "Place the book on your pillow after making the bed.",
+      "personalApplication": "Move one desired habit cue into your natural line of sight."
+    },
+    {
+      "concept": "Habit Tracking",
+      "authorExample": "A visual chain makes repetition satisfying and motivates consistency.",
+      "story": "The tracker gives immediate feedback before long-term results arrive.",
+      "modernExample": "A simple calendar mark after every study session.",
+      "personalApplication": "Track one habit for seven days and protect the streak from two misses."
+    }
+  ],
+  "actions": {
+    "tomorrow": [
+      "Write one identity statement: I am becoming the kind of person who...",
+      "Create one habit stack for a two-minute action.",
+      "Put the cue for the habit somewhere visible."
+    ],
+    "thisWeek": [
+      "Run a habit scorecard across one normal day.",
+      "Remove one source of friction from a good habit.",
+      "Add one point of friction to a habit you want to reduce."
+    ],
+    "thisMonth": [
+      "Review weekly habit data and adjust the environment.",
+      "Add one slightly larger version of the habit after consistency is stable.",
+      "Pair the habit with a reward that reinforces the identity."
+    ]
+  }
+}
