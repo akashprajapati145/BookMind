@@ -1,5 +1,65 @@
 [
   {
+    "slug": "atomic-habits-by-james-clear-pdf-2",
+    "title": "Atomic Habits by James Clear.pdf",
+    "author": "Unknown Author",
+    "category": "Uploaded",
+    "cover": "atomic-habits-by-james-clear-pdf-2",
+    "readingTime": "5h 50m",
+    "status": "extracted",
+    "progress": 0,
+    "addedAt": "2026-06-01T21:35:27.889Z",
+    "pdfPath": "storage/books/atomic-habits-by-james-clear-pdf-2.pdf"
+  },
+  {
+    "slug": "atomic-habits-by-james-clear-pdf",
+    "title": "Atomic Habits by James Clear.pdf",
+    "author": "Unknown Author",
+    "category": "Uploaded",
+    "cover": "atomic-habits-by-james-clear-pdf",
+    "readingTime": "5h 50m",
+    "status": "ready",
+    "progress": 1,
+    "addedAt": "2026-06-01T21:00:19.717Z",
+    "pdfPath": "storage/books/atomic-habits-by-james-clear-pdf.pdf"
+  },
+  {
+    "slug": "zero-to-one-2",
+    "title": "Zero to one",
+    "author": "Unknown Author",
+    "category": "Uploaded",
+    "cover": "zero-to-one-2",
+    "readingTime": "3h 15m",
+    "status": "ready",
+    "progress": 1,
+    "addedAt": "2026-06-01T20:21:41.766Z",
+    "pdfPath": "storage/books/zero-to-one-2.pdf"
+  },
+  {
+    "slug": "zero-to-one",
+    "title": "Zero to one",
+    "author": "Unknown Author",
+    "category": "Uploaded",
+    "cover": "zero-to-one",
+    "readingTime": "Processing",
+    "status": "processing",
+    "progress": 0,
+    "addedAt": "2026-06-01T19:19:13.335Z",
+    "pdfPath": "storage/books/zero-to-one.pdf"
+  },
+  {
+    "slug": "sap-commerce-cloud-road-map",
+    "title": "SAP Commerce Cloud Road Map",
+    "author": "Unknown Author",
+    "category": "Uploaded",
+    "cover": "sap-commerce-cloud-road-map",
+    "readingTime": "Processing",
+    "status": "processing",
+    "progress": 0,
+    "addedAt": "2026-06-01T19:03:26.485Z",
+    "pdfPath": "storage/books/sap-commerce-cloud-road-map.pdf"
+  },
+  {
     "slug": "atomic-habits",
     "title": "Atomic Habits",
     "author": "James Clear",

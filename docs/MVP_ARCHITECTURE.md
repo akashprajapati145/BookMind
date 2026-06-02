@@ -109,6 +109,8 @@ type KnowledgePackage = {
 
 MVP storage uses `storage/library.json` plus generated knowledge files under `storage/knowledge/[slug]/`. No database, auth, vector search, RAG, agents, or payments.
 
+AI provider constraint: use Google Gemini with `GOOGLE_API_KEY` if generation is needed. Do not add OpenAI dependencies, environment variables, or API calls.
+
 ## 5. Development Plan
 
 1. Create a Next.js + TypeScript + Tailwind foundation that preserves the Stitch design system.
@@ -117,5 +119,5 @@ MVP storage uses `storage/library.json` plus generated knowledge files under `st
 4. Build learning modes, journey, concepts, examples, chapters, actions, and reader routes.
 5. Add PDF upload to `storage/books/` and append metadata to `storage/library.json`.
 6. Add PDF text extraction with `pdf-parse`.
-7. Add OpenAI knowledge-package generation and markdown persistence.
+7. Add Google Gemini knowledge-package generation and markdown persistence. Do not use OpenAI APIs.
 8. Replace seed content display with generated markdown-backed content.

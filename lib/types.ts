@@ -1,4 +1,4 @@
-export type BookStatus = "ready" | "processing" | "failed";
+export type BookStatus = "ready" | "processing" | "extracted" | "failed";
 
 export type Book = {
   slug: string;

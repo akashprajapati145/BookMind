@@ -1,0 +1,112 @@
+{
+  "book": {
+    "slug": "zero-to-one",
+    "title": "Zero to one",
+    "author": "Unknown Author",
+    "category": "Uploaded",
+    "cover": "zero-to-one",
+    "readingTime": "Processing",
+    "status": "processing",
+    "progress": 0,
+    "addedAt": "2026-06-01T19:19:13.335Z",
+    "pdfPath": "storage/books/zero-to-one.pdf"
+  },
+  "thesis": "This PDF has been uploaded and is ready for extraction in the next MVP milestone.",
+  "framework": "PDF text extraction and AI knowledge generation will replace this placeholder package.",
+  "overview": [
+    "The source PDF is stored locally.",
+    "The book now appears in the library.",
+    "The next step is extracting text, then generating learning modes, concepts, examples, chapters, and actions."
+  ],
+  "learningModes": [
+    {
+      "slug": "1",
+      "label": "Flash",
+      "title": "Learn in 1 Minute",
+      "duration": "1 min",
+      "summary": "Pending knowledge generation.",
+      "sections": [
+        {
+          "title": "Processing",
+          "items": [
+            "Upload complete.",
+            "Text extraction is the next milestone."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "10",
+      "label": "Core",
+      "title": "Learn in 10 Minutes",
+      "duration": "10 min",
+      "summary": "Pending knowledge generation.",
+      "sections": [
+        {
+          "title": "Processing",
+          "items": [
+            "Core framework will be generated from the PDF."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "30",
+      "label": "Deep",
+      "title": "Learn in 30 Minutes",
+      "duration": "30 min",
+      "summary": "Pending knowledge generation.",
+      "sections": [
+        {
+          "title": "Processing",
+          "items": [
+            "Detailed understanding will be generated from the PDF."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "full",
+      "label": "Library",
+      "title": "Full Depth",
+      "duration": "Full",
+      "summary": "Pending knowledge generation.",
+      "sections": [
+        {
+          "title": "Processing",
+          "items": [
+            "Full knowledge package generation is queued for a later milestone."
+          ]
+        }
+      ]
+    }
+  ],
+  "journey": [
+    {
+      "title": "Uploaded",
+      "description": "The PDF has been saved to local storage."
+    }
+  ],
+  "contents": [
+    {
+      "title": "Pending Extraction",
+      "chapters": [
+        "PDF text extraction has not run yet."
+      ]
+    }
+  ],
+  "chapters": [],
+  "concepts": [],
+  "examples": [],
+  "actions": {
+    "tomorrow": [
+      "Run PDF text extraction."
+    ],
+    "thisWeek": [
+      "Generate the first knowledge package."
+    ],
+    "thisMonth": [
+      "Refine examples and chapter navigation."
+    ]
+  }
+}

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { BookHero } from "@/components/book-hero";
 import { DepthCard } from "@/components/depth-card";
+import { GenerateKnowledgeButton } from "@/components/generate-knowledge-button";
 import { KnowledgeSection } from "@/components/knowledge-section";
 import { getKnowledgePackage } from "@/lib/books";
 import { routes } from "@/lib/routes";
@@ -41,6 +42,7 @@ export default async function BookPage({ params }: BookPageProps) {
             <Link href={routes.reader(slug)} className="glass rounded-full px-5 py-3 font-bold">
               Read Source
             </Link>
+            {knowledge.book.status === "extracted" ? <GenerateKnowledgeButton slug={slug} /> : null}
           </>
         }
       />

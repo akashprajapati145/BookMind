@@ -480,7 +480,9 @@ JSON Metadata
 
 AI:
 
-OpenAI API
+Google Gemini API
+
+Do not use OpenAI API for this project.
 
 ---
 

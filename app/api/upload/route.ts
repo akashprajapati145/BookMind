@@ -1,8 +1,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { PDFParse } from "pdf-parse";
 import { toSlug } from "@/lib/slug";
 import type { Book, KnowledgePackage } from "@/lib/types";
+
+export const runtime = "nodejs";
 
 const root = process.cwd();
 const storageRoot = path.join(root, "storage");
@@ -36,6 +39,8 @@ export async function POST(request: Request) {
 
   const bytes = Buffer.from(await file.arrayBuffer());
   await fs.writeFile(pdfPath, bytes);
+  const extractedText = await extractPdfText(bytes);
+  const wordCount = countWords(extractedText);
 
   const book: Book = {
     slug,
@@ -43,8 +48,8 @@ export async function POST(request: Request) {
     author: authorValue.trim() || "Unknown Author",
     category: "Uploaded",
     cover: slug,
-    readingTime: "Processing",
-    status: "processing",
+    readingTime: estimateReadingTime(wordCount),
+    status: "extracted",
     progress: 0,
     addedAt: new Date().toISOString(),
     pdfPath: `storage/books/${slug}.pdf`
@@ -52,10 +57,61 @@ export async function POST(request: Request) {
 
   const packageRoot = path.join(knowledgeRoot, slug);
   await fs.mkdir(packageRoot, { recursive: true });
-  await fs.writeFile(path.join(packageRoot, "package.json"), JSON.stringify(createPlaceholderKnowledge(book), null, 2));
+  await fs.writeFile(path.join(packageRoot, "source.txt"), extractedText);
+  await fs.writeFile(
+    path.join(packageRoot, "extraction.json"),
+    JSON.stringify(
+      {
+        fileName: file.name,
+        bytes: bytes.length,
+        wordCount,
+        extractedAt: new Date().toISOString()
+      },
+      null,
+      2
+    )
+  );
+  await fs.writeFile(path.join(packageRoot, "package.json"), JSON.stringify(createPlaceholderKnowledge(book, wordCount), null, 2));
   await fs.writeFile(libraryPath, JSON.stringify([book, ...existingBooks], null, 2));
 
   return NextResponse.json({ book });
+}
+
+async function extractPdfText(bytes: Buffer) {
+  const parser = new PDFParse({ data: bytes });
+
+  try {
+    const result = await parser.getText();
+    const text = result.text.trim();
+
+    if (!text) {
+      return "No selectable text was extracted from this PDF. It may be scanned or image-based.";
+    }
+
+    return text;
+  } finally {
+    await parser.destroy();
+  }
+}
+
+function countWords(text: string) {
+  return text.split(/\s+/).filter(Boolean).length;
+}
+
+function estimateReadingTime(wordCount: number) {
+  if (wordCount <= 0) {
+    return "Text extracted";
+  }
+
+  const minutes = Math.max(1, Math.ceil(wordCount / 225));
+
+  if (minutes < 60) {
+    return `${minutes} min`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 }
 
 async function readLibrary(): Promise<Book[]> {
@@ -81,15 +137,15 @@ function uniqueSlug(baseSlug: string, books: Book[]) {
   return `${baseSlug}-${index}`;
 }
 
-function createPlaceholderKnowledge(book: Book): KnowledgePackage {
+function createPlaceholderKnowledge(book: Book, wordCount: number): KnowledgePackage {
   return {
     book,
-    thesis: "This PDF has been uploaded and is ready for extraction in the next MVP milestone.",
-    framework: "PDF text extraction and AI knowledge generation will replace this placeholder package.",
+    thesis: "This PDF has been uploaded and its text has been extracted locally. Google Gemini generation is the next milestone.",
+    framework: "Extracted source text is stored permanently and will be transformed into learning modes, concepts, examples, chapters, and actions.",
     overview: [
       "The source PDF is stored locally.",
-      "The book now appears in the library.",
-      "The next step is extracting text, then generating learning modes, concepts, examples, chapters, and actions."
+      `BookMind extracted approximately ${wordCount.toLocaleString()} words from the PDF.`,
+      "The next step is Google Gemini generation for learning modes, concepts, examples, chapters, and actions."
     ],
     learningModes: [
       {
@@ -98,7 +154,7 @@ function createPlaceholderKnowledge(book: Book): KnowledgePackage {
         title: "Learn in 1 Minute",
         duration: "1 min",
         summary: "Pending knowledge generation.",
-        sections: [{ title: "Processing", items: ["Upload complete.", "Text extraction is the next milestone."] }]
+        sections: [{ title: "Extracted", items: ["Upload complete.", "Source text extracted.", "Google Gemini generation is next."] }]
       },
       {
         slug: "10",
@@ -106,7 +162,7 @@ function createPlaceholderKnowledge(book: Book): KnowledgePackage {
         title: "Learn in 10 Minutes",
         duration: "10 min",
         summary: "Pending knowledge generation.",
-        sections: [{ title: "Processing", items: ["Core framework will be generated from the PDF."] }]
+        sections: [{ title: "Extracted", items: ["Core framework will be generated from the extracted text."] }]
       },
       {
         slug: "30",
@@ -114,7 +170,7 @@ function createPlaceholderKnowledge(book: Book): KnowledgePackage {
         title: "Learn in 30 Minutes",
         duration: "30 min",
         summary: "Pending knowledge generation.",
-        sections: [{ title: "Processing", items: ["Detailed understanding will be generated from the PDF."] }]
+        sections: [{ title: "Extracted", items: ["Detailed understanding will be generated from the extracted text."] }]
       },
       {
         slug: "full",
@@ -122,17 +178,17 @@ function createPlaceholderKnowledge(book: Book): KnowledgePackage {
         title: "Full Depth",
         duration: "Full",
         summary: "Pending knowledge generation.",
-        sections: [{ title: "Processing", items: ["Full knowledge package generation is queued for a later milestone."] }]
+        sections: [{ title: "Extracted", items: ["Full knowledge package generation is queued for the Google Gemini milestone."] }]
       }
     ],
-    journey: [{ title: "Uploaded", description: "The PDF has been saved to local storage." }],
-    contents: [{ title: "Pending Extraction", chapters: ["PDF text extraction has not run yet."] }],
+    journey: [{ title: "Extracted", description: "The PDF has been saved and converted into local source text." }],
+    contents: [{ title: "Pending Generation", chapters: ["Chapter hierarchy will be generated from extracted source text."] }],
     chapters: [],
     concepts: [],
     examples: [],
     actions: {
-      tomorrow: ["Run PDF text extraction."],
-      thisWeek: ["Generate the first knowledge package."],
+      tomorrow: ["Review extracted source text."],
+      thisWeek: ["Generate the first Google Gemini knowledge package."],
       thisMonth: ["Refine examples and chapter navigation."]
     }
   };

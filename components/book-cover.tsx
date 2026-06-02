@@ -14,8 +14,8 @@ export function BookCover({ title, author, className = "" }: BookCoverProps) {
       <div className="relative flex h-full flex-col justify-between p-5">
         <div className="text-xs font-bold uppercase tracking-[0.22em] text-slate-950/80">BookMind</div>
         <div>
-          <h3 className="font-display text-3xl font-bold leading-none text-white drop-shadow md:text-4xl">{title}</h3>
-          <p className="mt-4 text-sm font-semibold uppercase tracking-[0.18em] text-emerald-100">{author}</p>
+          <h3 className="break-words font-display text-3xl font-bold leading-none text-white drop-shadow md:text-4xl">{title}</h3>
+          <p className="mt-4 break-words text-sm font-semibold uppercase tracking-[0.18em] text-emerald-100">{author}</p>
         </div>
       </div>
     </div>

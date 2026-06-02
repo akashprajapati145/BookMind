@@ -1,0 +1,113 @@
+{
+  "book": {
+    "slug": "atomic-habits-by-james-clear-pdf-2",
+    "title": "Atomic Habits by James Clear.pdf",
+    "author": "Unknown Author",
+    "category": "Uploaded",
+    "cover": "atomic-habits-by-james-clear-pdf-2",
+    "readingTime": "5h 50m",
+    "status": "extracted",
+    "progress": 0,
+    "addedAt": "2026-06-01T21:35:27.889Z",
+    "pdfPath": "storage/books/atomic-habits-by-james-clear-pdf-2.pdf"
+  },
+  "thesis": "This PDF has been uploaded and its text has been extracted locally. Google Gemini generation is the next milestone.",
+  "framework": "Extracted source text is stored permanently and will be transformed into learning modes, concepts, examples, chapters, and actions.",
+  "overview": [
+    "The source PDF is stored locally.",
+    "BookMind extracted approximately 78,541 words from the PDF.",
+    "The next step is Google Gemini generation for learning modes, concepts, examples, chapters, and actions."
+  ],
+  "learningModes": [
+    {
+      "slug": "1",
+      "label": "Flash",
+      "title": "Learn in 1 Minute",
+      "duration": "1 min",
+      "summary": "Pending knowledge generation.",
+      "sections": [
+        {
+          "title": "Extracted",
+          "items": [
+            "Upload complete.",
+            "Source text extracted.",
+            "Google Gemini generation is next."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "10",
+      "label": "Core",
+      "title": "Learn in 10 Minutes",
+      "duration": "10 min",
+      "summary": "Pending knowledge generation.",
+      "sections": [
+        {
+          "title": "Extracted",
+          "items": [
+            "Core framework will be generated from the extracted text."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "30",
+      "label": "Deep",
+      "title": "Learn in 30 Minutes",
+      "duration": "30 min",
+      "summary": "Pending knowledge generation.",
+      "sections": [
+        {
+          "title": "Extracted",
+          "items": [
+            "Detailed understanding will be generated from the extracted text."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "full",
+      "label": "Library",
+      "title": "Full Depth",
+      "duration": "Full",
+      "summary": "Pending knowledge generation.",
+      "sections": [
+        {
+          "title": "Extracted",
+          "items": [
+            "Full knowledge package generation is queued for the Google Gemini milestone."
+          ]
+        }
+      ]
+    }
+  ],
+  "journey": [
+    {
+      "title": "Extracted",
+      "description": "The PDF has been saved and converted into local source text."
+    }
+  ],
+  "contents": [
+    {
+      "title": "Pending Generation",
+      "chapters": [
+        "Chapter hierarchy will be generated from extracted source text."
+      ]
+    }
+  ],
+  "chapters": [],
+  "concepts": [],
+  "examples": [],
+  "actions": {
+    "tomorrow": [
+      "Review extracted source text."
+    ],
+    "thisWeek": [
+      "Generate the first Google Gemini knowledge package."
+    ],
+    "thisMonth": [
+      "Refine examples and chapter navigation."
+    ]
+  }
+}
