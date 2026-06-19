@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const titleValue = String(formData.get("title") || "");
   const authorValue = String(formData.get("author") || "Unknown Author");
 
-  if (!(file instanceof File)) {
+  if (!isUploadedFile(file)) {
     return NextResponse.json({ error: "A PDF file is required." }, { status: 400 });
   }
 
@@ -75,6 +75,21 @@ export async function POST(request: Request) {
   await fs.writeFile(libraryPath, JSON.stringify([book, ...existingBooks], null, 2));
 
   return NextResponse.json({ book });
+}
+
+// Avoids depending on the global `File` constructor — it's not consistently
+// available as a bare global across Node versions/runtimes (it crashed with
+// "ReferenceError: File is not defined" on Railway's Node build despite working
+// locally on Windows). Checking the shape we actually use is environment-proof.
+function isUploadedFile(value: FormDataEntryValue | null): value is File {
+  return Boolean(
+    value &&
+    typeof value === "object" &&
+    "arrayBuffer" in value &&
+    typeof (value as { arrayBuffer?: unknown }).arrayBuffer === "function" &&
+    "name" in value &&
+    "type" in value
+  );
 }
 
 async function extractPdfText(bytes: Buffer) {
