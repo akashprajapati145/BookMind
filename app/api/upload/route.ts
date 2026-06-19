@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { PDFParse } from "pdf-parse";
+import pdfParse from "pdf-parse";
 import { toSlug } from "@/lib/slug";
 import type { Book, KnowledgePackage } from "@/lib/types";
 
@@ -78,20 +78,14 @@ export async function POST(request: Request) {
 }
 
 async function extractPdfText(bytes: Buffer) {
-  const parser = new PDFParse({ data: bytes });
+  const result = await pdfParse(bytes);
+  const text = result.text.trim();
 
-  try {
-    const result = await parser.getText();
-    const text = result.text.trim();
-
-    if (!text) {
-      return "No selectable text was extracted from this PDF. It may be scanned or image-based.";
-    }
-
-    return text;
-  } finally {
-    await parser.destroy();
+  if (!text) {
+    return "No selectable text was extracted from this PDF. It may be scanned or image-based.";
   }
+
+  return text;
 }
 
 function countWords(text: string) {
