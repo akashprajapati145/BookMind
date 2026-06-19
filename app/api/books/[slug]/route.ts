@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import type { Book } from "@/lib/types";
 
@@ -30,6 +31,13 @@ export async function DELETE(_request: Request, { params }: RouteProps) {
 
   // Delete the entire knowledge folder (index, chapters, source text, package, chunks)
   await fs.rm(path.join(knowledgeRoot, slug), { recursive: true, force: true });
+
+  // Removing a book via this route doesn't automatically invalidate Next.js's
+  // cache for pages that read the library elsewhere — without this, "/" and
+  // "/library" can keep serving a cached page still showing the deleted book.
+  revalidatePath("/");
+  revalidatePath("/library");
+  revalidatePath(`/books/${slug}`);
 
   return NextResponse.json({ success: true });
 }

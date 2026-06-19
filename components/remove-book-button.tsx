@@ -28,6 +28,7 @@ export function RemoveBookButton({ slug }: RemoveBookButtonProps) {
         return;
       }
 
+      router.refresh();
       router.push("/library");
     } catch {
       setError("Connection failed. Try again.");
