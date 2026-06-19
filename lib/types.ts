@@ -1,4 +1,4 @@
-export type BookStatus = "ready" | "processing" | "extracted" | "failed";
+export type BookStatus = "ready" | "processing" | "extracted" | "indexed" | "failed";
 
 export type Book = {
   slug: string;
@@ -61,6 +61,27 @@ export type ActionPlan = {
   tomorrow: string[];
   thisWeek: string[];
   thisMonth: string[];
+};
+
+// Lightweight index generated fast on first visit to the book dashboard.
+// Chapter summaries, full concepts, examples, and actions are lazy-loaded separately.
+export type BookIndex = {
+  book: Book;
+  thesis: string;
+  framework: string;
+  overview: string[];
+  contents: ContentPart[];    // chapter titles only — no summaries
+  conceptTitles: string[];    // concept names only — no descriptions
+  flashMode: LearningMode;    // 1-minute mode — cheapest to generate, highest value
+};
+
+// Per-chapter detail — stored as chapters/[chapter-slug].json, generated on demand.
+export type ChapterDetail = {
+  title: string;
+  summary: string[];   // 2-3 paragraphs explaining how the chapter's ideas connect, not a restatement of keyIdeas
+  keyIdeas: string[];
+  examples: string[];
+  actionItems: string[];
 };
 
 export type KnowledgePackage = {

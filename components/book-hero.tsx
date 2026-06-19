@@ -1,16 +1,15 @@
 import { BookCover } from "@/components/book-cover";
 import { GlassCard } from "@/components/glass-card";
 import { ProgressBar } from "@/components/progress-bar";
-import type { KnowledgePackage } from "@/lib/types";
+import type { Book } from "@/lib/types";
 
 type BookHeroProps = {
-  knowledge: KnowledgePackage;
+  book: Book;
+  thesis?: string;
   actions?: React.ReactNode;
 };
 
-export function BookHero({ knowledge, actions }: BookHeroProps) {
-  const { book } = knowledge;
-
+export function BookHero({ book, thesis, actions }: BookHeroProps) {
   return (
     <GlassCard className="mb-10 overflow-hidden">
       <div className="grid gap-8 p-5 md:grid-cols-[260px_1fr] md:p-8">
@@ -19,7 +18,7 @@ export function BookHero({ knowledge, actions }: BookHeroProps) {
           <p className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-secondary">{book.category}</p>
           <h1 className="break-words font-display text-5xl font-bold leading-none text-on-background md:text-7xl">{book.title}</h1>
           <p className="mt-4 text-lg text-on-surface-variant">by {book.author}</p>
-          <p className="mt-6 max-w-3xl break-words text-lg leading-8 text-on-surface">{knowledge.thesis}</p>
+          {thesis ? <p className="mt-6 max-w-3xl break-words text-lg leading-8 text-on-surface">{thesis}</p> : null}
           <div className="mt-8 max-w-md space-y-3">
             <div className="flex items-center justify-between text-xs font-bold uppercase tracking-[0.18em] text-on-surface-variant">
               <span>{book.progress}% complete</span>
