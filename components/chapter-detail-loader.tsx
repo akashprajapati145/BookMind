@@ -7,16 +7,19 @@ import type { ChapterDetail } from "@/lib/types";
 type ChapterDetailLoaderProps = {
   slug: string;
   chapterTitle: string;
-  initialDetail?: ChapterDetail;
+  // Every language already generated and saved on disk, keyed by language code —
+  // not just English. Without this, a page reload would only ever rehydrate
+  // English and any previously generated Hindi/German content would appear gone.
+  initialDetails?: Record<string, ChapterDetail>;
 };
 
-export function ChapterDetailLoader({ slug, chapterTitle, initialDetail }: ChapterDetailLoaderProps) {
+export function ChapterDetailLoader({ slug, chapterTitle, initialDetails }: ChapterDetailLoaderProps) {
   // English keeps its original, unchanged flow: a single manual "Load" button,
   // nothing automatic. Once loaded it becomes the first entry in `detailByLang`.
   const [englishStatus, setEnglishStatus] = useState<"idle" | "loading" | "error">("idle");
   const [englishError, setEnglishError] = useState("");
   const [detailByLang, setDetailByLang] = useState<Record<string, ChapterDetail>>(
-    initialDetail ? { [DEFAULT_LANGUAGE]: initialDetail } : {}
+    initialDetails ?? {}
   );
   const [activeLang, setActiveLang] = useState(DEFAULT_LANGUAGE);
 

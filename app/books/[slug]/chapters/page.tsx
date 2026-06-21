@@ -4,7 +4,7 @@ import { BookNavTabs } from "@/components/book-nav-tabs";
 import { ChapterDetailLoader } from "@/components/chapter-detail-loader";
 import { KnowledgeSection } from "@/components/knowledge-section";
 import { PageHeader } from "@/components/page-header";
-import { getBookIndex, getChapterDetail, getKnowledgePackage } from "@/lib/books";
+import { getAllChapterDetails, getBookIndex, getKnowledgePackage } from "@/lib/books";
 import { toSlug } from "@/lib/slug";
 
 type ChaptersPageProps = {
@@ -61,7 +61,7 @@ export default async function ChaptersPage({ params }: ChaptersPageProps) {
               <ChapterDetailLoader
                 slug={slug}
                 chapterTitle={title}
-                initialDetail={getChapterDetail(slug, toSlug(title))}
+                initialDetails={getAllChapterDetails(slug, toSlug(title))}
               />
             </KnowledgeSection>
           ))

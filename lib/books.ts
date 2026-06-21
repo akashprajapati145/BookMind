@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { DEFAULT_LANGUAGE } from "@/lib/languages";
+import { DEFAULT_LANGUAGE, LANGUAGES } from "@/lib/languages";
 import type { Book, BookIndex, ChapterDetail, KnowledgePackage, LearningMode } from "@/lib/types";
 
 const root = process.cwd();
@@ -71,6 +71,22 @@ export function getChapterDetail(slug: string, chapterSlug: string, lang: string
 // keep working without any migration. Other languages get a [code] suffix.
 export function chapterFileName(chapterSlug: string, lang: string): string {
   return lang === DEFAULT_LANGUAGE ? `${chapterSlug}.json` : `${chapterSlug}.${lang}.json`;
+}
+
+// Checks disk for every configured language, not just English — without this,
+// a page reload only ever rehydrates the English tab and any already-generated
+// Hindi/German content silently disappears even though it's still saved on disk.
+export function getAllChapterDetails(slug: string, chapterSlug: string): Record<string, ChapterDetail> {
+  const found: Record<string, ChapterDetail> = {};
+
+  for (const language of LANGUAGES) {
+    const detail = getChapterDetail(slug, chapterSlug, language.code);
+    if (detail) {
+      found[language.code] = detail;
+    }
+  }
+
+  return found;
 }
 
 export function getMode(slug: string, modeSlug: string): LearningMode | undefined {
