@@ -5,6 +5,11 @@ import { PageHeader } from "@/components/page-header";
 import { getBooks } from "@/lib/books";
 import { routes } from "@/lib/routes";
 
+// Without this, Next.js statically pre-renders this page at build time and
+// serves that same frozen snapshot to every visitor — uploads/deletes update
+// the underlying files but never show up here without an explicit revalidate.
+export const dynamic = "force-dynamic";
+
 export default function LibraryPage() {
   const books = getBooks();
 

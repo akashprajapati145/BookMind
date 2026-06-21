@@ -7,6 +7,11 @@ import { RecentBooksShelf } from "@/components/recent-books-shelf";
 import { getBookIndex, getBooks, getKnowledgePackage } from "@/lib/books";
 import { routes } from "@/lib/routes";
 
+// Without this, Next.js statically pre-renders this page at build time and
+// serves that same frozen snapshot to every visitor — uploads/deletes update
+// the underlying files but never show up here without an explicit revalidate.
+export const dynamic = "force-dynamic";
+
 function getFeaturedBook(books: ReturnType<typeof getBooks>) {
   // Skip books still stuck in the placeholder "extracted" state — they have no real
   // thesis yet, only the stale copy written at upload time before any analysis ran.

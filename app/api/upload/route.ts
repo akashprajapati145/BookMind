@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import pdfParse from "pdf-parse";
 import { toSlug } from "@/lib/slug";
@@ -73,6 +74,12 @@ export async function POST(request: Request) {
   );
   await fs.writeFile(path.join(packageRoot, "package.json"), JSON.stringify(createPlaceholderKnowledge(book, wordCount), null, 2));
   await fs.writeFile(libraryPath, JSON.stringify([book, ...existingBooks], null, 2));
+
+  // Without this, "/" and "/library" can keep serving a statically cached page
+  // from build time that doesn't include the newly uploaded book — same root
+  // cause as the earlier delete bug, just on the upload side.
+  revalidatePath("/");
+  revalidatePath("/library");
 
   return NextResponse.json({ book });
 }
