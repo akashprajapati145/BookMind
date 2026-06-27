@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { DEFAULT_LANGUAGE, LANGUAGES } from "@/lib/languages";
-import type { ChapterDetail } from "@/lib/types";
+import type { ChapterDetail, ChapterSection } from "@/lib/types";
 
 type ChapterDetailLoaderProps = {
   slug: string;
@@ -133,20 +133,7 @@ export function ChapterDetailLoader({ slug, chapterTitle, initialDetails }: Chap
             </div>
           ) : null}
 
-          {detailByLang[activeLang] ? (
-            <div className="space-y-5">
-              <div className="space-y-3">
-                {detailByLang[activeLang].summary.map((paragraph) => (
-                  <p key={paragraph} className="leading-7">{paragraph}</p>
-                ))}
-              </div>
-              <div className="grid gap-4 md:grid-cols-3">
-                <DetailList title="Key Ideas" items={detailByLang[activeLang].keyIdeas} />
-                <DetailList title="Examples" items={detailByLang[activeLang].examples} />
-                <DetailList title="Action Items" items={detailByLang[activeLang].actionItems} />
-              </div>
-            </div>
-          ) : null}
+          {detailByLang[activeLang] ? <ChapterContent detail={detailByLang[activeLang]} /> : null}
 
           {/* Explicit dropdown + Generate button — the only way a new language gets created. */}
           {pendingLanguages.length > 0 ? (
@@ -195,16 +182,87 @@ export function ChapterDetailLoader({ slug, chapterTitle, initialDetails }: Chap
   );
 }
 
-function DetailList({ title, items }: { title: string; items: string[] }) {
-  if (items.length === 0) return null;
+// Renders whichever sections the model actually produced for this chapter's
+// shape — a "list" for an enumerated chapter, "prose" for narrative/argument,
+// "steps" for instructional. No fixed template; nothing forced onto content
+// that doesn't have it.
+function ChapterContent({ detail }: { detail: ChapterDetail }) {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-3">
+        {detail.summary.map((paragraph, index) => (
+          <p key={index} className="leading-7">{paragraph}</p>
+        ))}
+      </div>
+
+      {detail.sections.map((section, index) => (
+        <ChapterSectionView key={index} section={section} />
+      ))}
+
+      {detail.standoutExample ? (
+        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <h3 className="mb-2 text-sm font-bold uppercase tracking-[0.16em] text-secondary">
+            {detail.standoutExample.label}
+          </h3>
+          <p className="text-sm leading-6 text-on-surface-variant">{detail.standoutExample.story}</p>
+        </div>
+      ) : null}
+
+      {detail.actionItems && detail.actionItems.length > 0 ? (
+        <div>
+          <h3 className="mb-3 text-sm font-bold uppercase tracking-[0.16em] text-secondary">Action Items</h3>
+          <ul className="space-y-2 text-sm leading-6">
+            {detail.actionItems.map((item, index) => (
+              <li key={index} className="border-b border-white/10 pb-2 last:border-0">{item}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ChapterSectionView({ section }: { section: ChapterSection }) {
+  if (section.kind === "prose") {
+    return (
+      <div>
+        {section.title ? <h3 className="mb-3 text-sm font-bold uppercase tracking-[0.16em] text-secondary">{section.title}</h3> : null}
+        <div className="space-y-3">
+          {section.paragraphs.map((paragraph, index) => (
+            <p key={index} className="leading-7">{paragraph}</p>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (section.kind === "list") {
+    return (
+      <div>
+        {section.title ? <h3 className="mb-3 text-sm font-bold uppercase tracking-[0.16em] text-secondary">{section.title}</h3> : null}
+        <ul className="space-y-3 text-sm">
+          {section.items.map((item, index) => (
+            <li key={index} className="border-b border-white/10 pb-3 leading-6 last:border-0">
+              {item.label ? <span className="font-bold text-on-background">{item.label}: </span> : null}
+              <span className="text-on-surface-variant">{item.explanation}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <h3 className="mb-3 text-sm font-bold uppercase tracking-[0.16em] text-secondary">{title}</h3>
-      <ul className="space-y-2 text-sm leading-6">
-        {items.map((item) => (
-          <li key={item} className="border-b border-white/10 pb-2 last:border-0">{item}</li>
+      {section.title ? <h3 className="mb-3 text-sm font-bold uppercase tracking-[0.16em] text-secondary">{section.title}</h3> : null}
+      <ol className="space-y-3 text-sm">
+        {section.items.map((item, index) => (
+          <li key={index} className="border-b border-white/10 pb-3 last:border-0">
+            <span className="font-bold text-on-background">{index + 1}. {item.step}</span>
+            {item.explanation ? <p className="mt-1 leading-6 text-on-surface-variant">{item.explanation}</p> : null}
+          </li>
         ))}
-      </ul>
+      </ol>
     </div>
   );
 }

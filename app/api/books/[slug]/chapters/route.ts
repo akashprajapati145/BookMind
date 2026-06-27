@@ -1,11 +1,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { chapterFileName } from "@/lib/books";
+import { chapterFileName, getChapterDetail } from "@/lib/books";
 import { generateChapterDetail } from "@/lib/gemini";
 import { DEFAULT_LANGUAGE, LANGUAGES } from "@/lib/languages";
 import { toSlug } from "@/lib/slug";
-import type { Book, BookIndex, ChapterDetail } from "@/lib/types";
+import type { Book, BookIndex } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -31,10 +31,13 @@ export async function POST(request: Request, { params }: RouteProps) {
   const chaptersDir = path.join(packageRoot, "chapters");
   const chapterPath = path.join(chaptersDir, chapterFileName(chapterSlug, lang));
 
-  // Idempotency: return the cached file if it already exists
-  const existing = await fs.readFile(chapterPath, "utf8").catch(() => null);
+  // Idempotency: return the cached file if it already exists. Goes through
+  // getChapterDetail (not a raw read) so old-schema cached chapters get the
+  // same migration applied here as on page load, instead of returning a shape
+  // the new UI doesn't know how to render.
+  const existing = getChapterDetail(slug, chapterSlug, lang);
   if (existing) {
-    return NextResponse.json({ chapter: JSON.parse(existing) as ChapterDetail });
+    return NextResponse.json({ chapter: existing });
   }
 
   const books = await readLibrary();

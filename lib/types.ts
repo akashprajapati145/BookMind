@@ -75,13 +75,28 @@ export type BookIndex = {
   flashMode: LearningMode;    // 1-minute mode — cheapest to generate, highest value
 };
 
+// Adaptive chapter content — the model classifies the chapter's shape and only
+// produces the section types that actually fit it. A chapter built around a
+// named/numbered list (e.g. "10 rules") gets a "list" section with every item
+// present; a narrative chapter gets "prose"; an instructional chapter gets
+// "steps". No section type is forced onto content that doesn't have it.
+export type ChapterSectionKind = "prose" | "list" | "steps";
+
+export type ChapterSection =
+  | { kind: "prose"; title: string; paragraphs: string[] }
+  | { kind: "list"; title: string; items: Array<{ label: string; explanation: string }> }
+  | { kind: "steps"; title: string; items: Array<{ step: string; explanation: string }> };
+
+export type ChapterType = "enumerated" | "argument" | "narrative" | "instructional" | "mixed";
+
 // Per-chapter detail — stored as chapters/[chapter-slug].json, generated on demand.
 export type ChapterDetail = {
   title: string;
-  summary: string[];   // 2-3 paragraphs explaining how the chapter's ideas connect, not a restatement of keyIdeas
-  keyIdeas: string[];
-  examples: string[];
-  actionItems: string[];
+  chapterType: ChapterType;
+  summary: string[];                              // short framing/orientation — always present
+  sections: ChapterSection[];                       // the adaptive part — one or more
+  standoutExample?: { label: string; story: string };  // only if genuinely distinct, not routine
+  actionItems?: string[];                           // omitted entirely when the chapter has none
 };
 
 export type KnowledgePackage = {

@@ -1,5 +1,8 @@
+import path from "node:path";
+import { isolateChapterText } from "@/lib/chapter-isolation";
 import { DEFAULT_LANGUAGE, LANGUAGES } from "@/lib/languages";
-import type { ActionPlan, Book, BookIndex, ChapterDetail, ChapterKnowledge, Concept, ContentPart, Example, JourneyNode, KnowledgePackage, LearningMode } from "@/lib/types";
+import { loadOutline } from "@/lib/pdf-outline";
+import type { ActionPlan, Book, BookIndex, ChapterDetail, ChapterKnowledge, ChapterSection, ChapterType, Concept, ContentPart, Example, JourneyNode, KnowledgePackage, LearningMode } from "@/lib/types";
 
 type GeminiResponse = {
   candidates?: Array<{
@@ -615,7 +618,7 @@ function normalizeFlashMode(value: unknown): LearningMode {
   };
 }
 
-// ─── Staged generation: single chapter ───────────────────────────────────────
+// ─── Staged generation: single chapter (adaptive structure) ──────────────────
 
 export async function generateChapterDetail(
   book: Book,
@@ -624,60 +627,115 @@ export async function generateChapterDetail(
   index: BookIndex,
   lang: string = DEFAULT_LANGUAGE
 ): Promise<ChapterDetail> {
-  const raw = await callGemini<unknown>(buildChapterDetailPrompt(book, chapterTitle, sourceText, index.thesis, lang));
-  return normalizeChapterDetail(raw, chapterTitle);
+  const allChapterTitles = index.contents.flatMap((part) => part.chapters);
+  const outline = book.pdfPath ? await loadOutline(path.join(process.cwd(), book.pdfPath)) : null;
+  const isolated = isolateChapterText(sourceText, allChapterTitles, chapterTitle, outline);
+  const chapterText = isolated ?? sourceText;
+
+  const raw = await callGemini<unknown>(
+    buildChapterDetailPrompt(book, chapterTitle, chapterText, index.thesis, lang, isolated === null)
+  );
+  const detail = normalizeChapterDetail(raw, chapterTitle);
+
+  if (isolated) {
+    warnIfEnumerationUndercounted(chapterTitle, isolated, detail);
+  }
+
+  return detail;
+}
+
+// ─── Chapter text isolation ───────────────────────────────────────────────────
+// isolateChapterText itself now lives in lib/chapter-isolation.ts (imported
+// above) so the standing diagnostic script can test the exact same function
+// directly against real book data, rather than a reimplementation that could
+// drift from what production actually runs.
+
+// Heuristic visibility check, not a hard guarantee: counts lines that look like
+// a numbered list item near the start of a line. Books format lists
+// inconsistently, so this can't catch every case, but it flags the exact
+// failure mode this whole rework targets — silently dropping enumerated items.
+function warnIfEnumerationUndercounted(chapterTitle: string, chapterText: string, detail: ChapterDetail) {
+  const numberedLines = chapterText.match(/^\s{0,3}\d{1,2}[.)]\s+\S/gm) ?? [];
+  const sourceCount = numberedLines.length;
+
+  if (sourceCount < 3) return;
+
+  const generatedCount = detail.sections
+    .filter((section): section is Extract<ChapterSection, { kind: "list" }> => section.kind === "list")
+    .reduce((sum, section) => sum + section.items.length, 0);
+
+  if (generatedCount < sourceCount) {
+    console.warn(
+      `[BookMind] Chapter "${chapterTitle}" may be under-counted: source text has ~${sourceCount} numbered lines, generated output has ${generatedCount} list items.`
+    );
+  }
 }
 
 function buildChapterDetailPrompt(
   book: Book,
   chapterTitle: string,
-  sourceText: string,
+  chapterText: string,
   thesis: string,
-  lang: string
+  lang: string,
+  isFullBookFallback: boolean
 ): string {
-  // English prompt is unchanged from the original — only non-English languages
-  // get an appended instruction, so the existing English generation flow is untouched.
   const languageInstruction =
     lang === DEFAULT_LANGUAGE
       ? ""
-      : `\n\nRespond entirely in ${languageLabel(lang)}. Every field (title, summary, keyIdeas, examples, actionItems) must be written in ${languageLabel(lang)}, not English.`;
+      : `\n\nRespond entirely in ${languageLabel(lang)}. Every field must be written in ${languageLabel(lang)}, not English.`;
 
-  return `You are BookMind, a book learning system.
+  const scopeNote = isFullBookFallback
+    ? `This chapter's exact boundaries could not be isolated, so you have the full book text below. Focus ONLY on the chapter titled "${chapterTitle}" and ignore all other chapters.`
+    : `The text below is the isolated content of this chapter only.`;
 
-Generate detailed knowledge for ONE specific chapter.
+  return `You are BookMind, a book learning system that explains chapters the way a smart, well-read friend would — not the way an AI writes a report.
+
+Your task has two parts.
+
+PART 1 — Classify this chapter's shape. Decide which ONE best fits:
+- "enumerated": built around a named or numbered list/framework (e.g. "10 rules," "13 mistakes," a multi-step method with named items)
+- "argument": a single sustained argument or thesis developed across the chapter, not a list of separate items
+- "narrative": story-driven — fiction, biography, a recounted sequence of events
+- "instructional": a step-by-step process or formula taught in sequence
+- "mixed": genuinely combines two of the above in a way that can't be reduced to one
+
+PART 2 — Generate ONLY the sections that fit that shape. Never force a section type onto content that doesn't have it.
 
 Book: "${book.title}" by ${book.author}
 Thesis: ${thesis}
-Chapter to analyze: "${chapterTitle}"
+Chapter: "${chapterTitle}"
+${scopeNote}
 
 Return valid JSON only. No markdown fences.
 
 {
-  "title": "${chapterTitle}",
-  "summary": ["paragraph 1", "paragraph 2", "paragraph 3 (optional)"],
-  "keyIdeas": ["key idea or principle introduced in this chapter"],
-  "examples": ["specific example or story used in this chapter"],
-  "actionItems": ["one concrete action derived from this chapter's lessons"]
+  "chapterType": "enumerated" | "argument" | "narrative" | "instructional" | "mixed",
+  "summary": ["paragraph 1, as its own array string", "paragraph 2, as its own array string", "paragraph 3 (optional), as its own array string"],
+  "sections": [
+    { "kind": "list", "title": "section heading", "items": [{ "label": "author's original short label", "explanation": "3-5 sentences" }] },
+    { "kind": "steps", "title": "section heading", "items": [{ "step": "what to do", "explanation": "3-5 sentences on how/why" }] },
+    { "kind": "prose", "title": "section heading", "paragraphs": ["2-4 substantial paragraphs"] }
+  ],
+  "standoutExample": { "label": "short label", "story": "2-4 sentences" },
+  "actionItems": ["concrete action"]
 }
 
-The "summary" field is the most important part of this response. Its job is NOT to
-restate the keyIdeas/examples/actionItems below at lower resolution — it must explain
-HOW the chapter's ideas connect and build on each other, and WHY the chapter unfolds
-in that order. Write it as if walking a curious reader through the chapter's reasoning
-in plain, accessible language, the way you'd explain it out loud to someone who hasn't
-read the book. A reader should finish it actually understanding the chapter's argument,
-not just recognizing a list of facts about it.
+Section shape guide:
+- "list" — for "enumerated" chapters. If the chapter contains a numbered or explicitly named list, you MUST include every single item from the source. The item count you return must match the source exactly — never compress to a representative subset, never skip items, never merge two items into one. Keep the author's original short label for each item. Each explanation is 3-5 sentences (a short paragraph) — what it means, why it matters, and enough context that someone who hasn't read the book actually understands it, not just recognizes a label. Weave in a brief example inside the explanation if one is directly tied to that specific item — don't duplicate it elsewhere.
+- "steps" — for "instructional" chapters. Capture the actual mechanism or formula in each step, not just that a step exists. Same depth as "list": 3-5 sentences per step.
+- "prose" — for "argument" or "narrative" chapters. This is the chapter's main substance when there's no list to carry it, so give it real room: 2-4 full paragraphs. For narrative, trace the actual arc (what happens, in what order) with enough detail to follow the story, not a thin recap. For argument, walk through how the reasoning builds step by step, not just the conclusion.
 
-Limits:
-- summary: 2-3 short paragraphs, 150-250 words total, plain language, no jargon
-- keyIdeas: max 5 items, max 200 chars each
-- examples: max 4 items, max 300 chars each
-- actionItems: max 4 items, max 200 chars each
+Rules:
+- "summary": 2-3 paragraphs of genuine connective narrative — explain HOW the chapter's ideas build and connect, and WHY it unfolds in that order, the way a well-read friend would walk you through it before you get to the specifics. This is the chapter's "story," not a list — do not enumerate or restate individual items here (the sections below do that), but do make the reader feel like they understand the chapter's shape before reading further. Each paragraph MUST be its own separate string in the array — never combine multiple paragraphs into one array element. The array should have 2-3 elements, not 1.
+- "sections": at least one. An enumerated chapter normally needs exactly one "list" section containing every item — don't split items across multiple sections or add a second section that just repeats them in prose.
+- "standoutExample": omit this field entirely unless there's one genuinely distinct, memorable story worth calling out on its own, separate from anything already covered inside a list/steps item. Most chapters should omit it.
+- "actionItems": omit this field entirely if the chapter has no real actionable takeaway (most narrative/biography chapters won't). Only include it when the chapter actually supports concrete action, and keep items distinct from what the sections above already say.
+- Overall, this should read like a satisfying short-form version of the chapter — long enough that someone genuinely understands it without reading the original, short enough that it's clearly a condensed read, not a spec sheet or bullet dump. A chapter with many distinct enumerated points will naturally run longer than a single-argument chapter, because each point now earns a real explanation, not a label — that's expected and correct. Don't pad a short chapter to hit a length target, and don't compress a long enumerated chapter's item count to hit one either.
+- Write in short, direct sentences. Define any technical or niche term the moment you use it. Do not use stiff AI-summary phrasing — avoid "it is important to note," "furthermore," "this underscores," "delve into," "moreover," "in essence," "overall." Write like you're explaining it to a smart friend, not writing a report.
+- This must work for any genre — fiction, biography, technical, academic, business. Do not assume a business/self-help framing.${languageInstruction}
 
-Focus ONLY on the chapter titled "${chapterTitle}". Extract specific examples and ideas from that section.${languageInstruction}
-
-FULL BOOK TEXT:
-${sourceText}`;
+CHAPTER TEXT:
+${chapterText}`;
 }
 
 function languageLabel(code: string): string {
@@ -686,13 +744,69 @@ function languageLabel(code: string): string {
 
 function normalizeChapterDetail(raw: unknown, fallbackTitle: string): ChapterDetail {
   const obj = isRecord(raw) ? raw : {};
-  return {
+
+  const detail: ChapterDetail = {
     title: stringOr(obj.title, fallbackTitle),
+    chapterType: normalizeChapterType(obj.chapterType),
     summary: toParagraphs(obj.summary),
-    keyIdeas: stringArray(obj.keyIdeas),
-    examples: stringArray(obj.examples),
-    actionItems: stringArray(obj.actionItems)
+    sections: normalizeSections(obj.sections)
   };
+
+  const standoutExample = normalizeStandoutExample(obj.standoutExample);
+  if (standoutExample) detail.standoutExample = standoutExample;
+
+  const actionItems = stringArray(obj.actionItems);
+  if (actionItems.length > 0) detail.actionItems = actionItems;
+
+  return detail;
+}
+
+function normalizeChapterType(value: unknown): ChapterType {
+  const allowed: ChapterType[] = ["enumerated", "argument", "narrative", "instructional", "mixed"];
+  return allowed.includes(value as ChapterType) ? (value as ChapterType) : "mixed";
+}
+
+function normalizeSections(value: unknown): ChapterSection[] {
+  if (!Array.isArray(value)) return [];
+
+  const sections: ChapterSection[] = [];
+
+  for (const raw of value) {
+    if (!isRecord(raw)) continue;
+    const title = stringOr(raw.title, "");
+
+    if (raw.kind === "list" && Array.isArray(raw.items)) {
+      const items = raw.items
+        .filter(isRecord)
+        .map((item) => ({ label: stringOr(item.label, ""), explanation: stringOr(item.explanation, "") }))
+        .filter((item) => item.label || item.explanation);
+      if (items.length > 0) sections.push({ kind: "list", title, items });
+      continue;
+    }
+
+    if (raw.kind === "steps" && Array.isArray(raw.items)) {
+      const items = raw.items
+        .filter(isRecord)
+        .map((item) => ({ step: stringOr(item.step, ""), explanation: stringOr(item.explanation, "") }))
+        .filter((item) => item.step || item.explanation);
+      if (items.length > 0) sections.push({ kind: "steps", title, items });
+      continue;
+    }
+
+    if (raw.kind === "prose") {
+      const paragraphs = stringArray(raw.paragraphs);
+      if (paragraphs.length > 0) sections.push({ kind: "prose", title, paragraphs });
+    }
+  }
+
+  return sections;
+}
+
+function normalizeStandoutExample(value: unknown): { label: string; story: string } | undefined {
+  if (!isRecord(value)) return undefined;
+  const label = stringOr(value.label, "");
+  const story = stringOr(value.story, "");
+  return label && story ? { label, story } : undefined;
 }
 
 // Accepts either the requested string[] or (defensively) a single string,
