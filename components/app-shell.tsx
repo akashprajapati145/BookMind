@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { routes } from "@/lib/routes";
+import { LogoutButton } from "@/components/logout-button";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -23,6 +24,7 @@ export function AppShell({ children }: AppShellProps) {
             <Link className="rounded-full bg-primary px-4 py-2 text-sm font-bold text-on-primary" href={routes.upload}>
               Upload
             </Link>
+            <LogoutButton />
           </nav>
         </div>
       </header>
