@@ -11,6 +11,8 @@
     "check-chapters": "tsx scripts/check-chapter-boundaries.ts"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.4",
+    "@supabase/supabase-js": "^2.111.0",
     "next": "^15.3.3",
     "pdf-lib": "^1.17.1",
     "pdf-parse": "1.1.1",

@@ -1,55 +1,55 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
-import type { Book } from "@/lib/types";
+import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
-
-const root = process.cwd();
-const libraryPath = path.join(root, "storage", "library.json");
-const booksRoot = path.join(root, "storage", "books");
-const knowledgeRoot = path.join(root, "storage", "knowledge");
 
 type RouteProps = { params: Promise<{ slug: string }> };
 
 export async function DELETE(_request: Request, { params }: RouteProps) {
   const { slug } = await params;
 
-  const books = await readLibrary();
-  const exists = books.some((b) => b.slug === slug);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
 
-  if (!exists) {
+  // Verify ownership before deleting
+  const { data: book } = await supabase
+    .from("books")
+    .select("slug, metadata")
+    .eq("user_id", user.id)
+    .eq("slug", slug)
+    .single();
+
+  if (!book) {
     return NextResponse.json({ error: "Book not found." }, { status: 404 });
   }
 
-  // Remove from library.json first so the book is gone from the UI immediately
-  await writeLibrary(books.filter((b) => b.slug !== slug));
+  // Delete all knowledge rows for this book
+  await supabase
+    .from("knowledge")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("slug", slug);
 
-  // Delete PDF file (best effort — don't fail if already missing)
-  await fs.rm(path.join(booksRoot, `${slug}.pdf`), { force: true });
+  // Delete book row (this is the source of truth; knowledge already gone)
+  await supabase
+    .from("books")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("slug", slug);
 
-  // Delete the entire knowledge folder (index, chapters, source text, package, chunks)
-  await fs.rm(path.join(knowledgeRoot, slug), { recursive: true, force: true });
+  // Remove files from Supabase Storage (best-effort — don't fail if already missing)
+  await supabase.storage.from("bookmind").remove([
+    `${user.id}/books/${slug}.pdf`,
+    `${user.id}/source/${slug}.txt`
+  ]);
 
-  // Removing a book via this route doesn't automatically invalidate Next.js's
-  // cache for pages that read the library elsewhere — without this, "/" and
-  // "/library" can keep serving a cached page still showing the deleted book.
   revalidatePath("/");
   revalidatePath("/library");
   revalidatePath(`/books/${slug}`);
 
   return NextResponse.json({ success: true });
-}
-
-async function readLibrary(): Promise<Book[]> {
-  try {
-    return JSON.parse(await fs.readFile(libraryPath, "utf8")) as Book[];
-  } catch {
-    return [];
-  }
-}
-
-async function writeLibrary(books: Book[]) {
-  await fs.writeFile(libraryPath, JSON.stringify(books, null, 2));
 }

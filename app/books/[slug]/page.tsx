@@ -33,11 +33,11 @@ const STUB_MODES: LearningMode[] = [
 export default async function BookPage({ params }: BookPageProps) {
   const { slug } = await params;
 
-  const bookIndex = getBookIndex(slug);
-  const knowledge = bookIndex ? null : getKnowledgePackage(slug);
+  const bookIndex = await getBookIndex(slug);
+  const knowledge = bookIndex ? null : await getKnowledgePackage(slug);
 
   if (!bookIndex && !knowledge) {
-    notFound();
+    return notFound();
   }
 
   const book = bookIndex?.book ?? knowledge!.book;

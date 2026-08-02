@@ -14,11 +14,11 @@ type ChaptersPageProps = {
 export default async function ChaptersPage({ params }: ChaptersPageProps) {
   const { slug } = await params;
 
-  const bookIndex = getBookIndex(slug);
-  const knowledge = bookIndex ? null : getKnowledgePackage(slug);
+  const bookIndex = await getBookIndex(slug);
+  const knowledge = bookIndex ? null : await getKnowledgePackage(slug);
 
   if (!bookIndex && !knowledge) {
-    notFound();
+    return notFound();
   }
 
   const bookTitle = bookIndex?.book.title ?? knowledge!.book.title;
@@ -26,6 +26,12 @@ export default async function ChaptersPage({ params }: ChaptersPageProps) {
 
   // Flat list of all chapter titles from the table of contents
   const chapterTitles = contents.flatMap((part) => part.chapters);
+
+  // Pre-fetch all cached chapter details in parallel so the server component
+  // can pass initialDetails to each ChapterDetailLoader without blocking on each
+  const allInitialDetails = bookIndex
+    ? await Promise.all(chapterTitles.map((title) => getAllChapterDetails(slug, toSlug(title))))
+    : [];
 
   return (
     <AppShell>
@@ -56,12 +62,12 @@ export default async function ChaptersPage({ params }: ChaptersPageProps) {
           // Indexed books: chapters already generated in a past session are read
           // from disk here and rendered immediately — no fetch, no re-generation.
           // Only chapters never visited before show the "Load" button.
-          chapterTitles.map((title) => (
+          chapterTitles.map((title, i) => (
             <KnowledgeSection key={title} eyebrow="Chapter" title={title}>
               <ChapterDetailLoader
                 slug={slug}
                 chapterTitle={title}
-                initialDetails={getAllChapterDetails(slug, toSlug(title))}
+                initialDetails={allInitialDetails[i]}
               />
             </KnowledgeSection>
           ))

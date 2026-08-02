@@ -1,64 +1,179 @@
-import fs from "node:fs";
-import path from "node:path";
+import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_LANGUAGE, LANGUAGES } from "@/lib/languages";
-import type { Book, BookIndex, ChapterDetail, ChapterSection, ChapterType, KnowledgePackage, LearningMode } from "@/lib/types";
+import type { Book, BookIndex, BookStatus, ChapterDetail, ChapterSection, ChapterType, KnowledgePackage, LearningMode } from "@/lib/types";
 
-const root = process.cwd();
-const libraryPath = path.join(root, "storage", "library.json");
-const knowledgeRoot = path.join(root, "storage", "knowledge");
+// ---------------------------------------------------------------------------
+// DB row → Book type
+// ---------------------------------------------------------------------------
 
-export function getBooks(): Book[] {
-  // A freshly mounted persistent volume (e.g. on first deploy) has no library.json
-  // yet — treat that as an empty library instead of crashing every page.
-  if (!fs.existsSync(libraryPath)) {
-    return [];
+function rowToBook(row: Record<string, unknown>): Book {
+  const meta = (row.metadata ?? {}) as Record<string, unknown>;
+  return {
+    slug: row.slug as string,
+    title: row.title as string,
+    author: row.author as string,
+    status: row.status as BookStatus,
+    progress: row.progress as number,
+    addedAt: row.added_at as string,
+    category: (meta.category as string) ?? "Uploaded",
+    cover: (meta.cover as string) ?? (row.slug as string),
+    readingTime: (meta.readingTime as string) ?? "",
+    pdfPath: (meta.pdfPath as string) ?? undefined
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Book queries
+// ---------------------------------------------------------------------------
+
+export async function getBooks(): Promise<Book[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data } = await supabase
+    .from("books")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("added_at", { ascending: false });
+  return (data ?? []).map(rowToBook);
+}
+
+export async function getBook(slug: string): Promise<Book | undefined> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return undefined;
+  const { data } = await supabase
+    .from("books")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("slug", slug)
+    .single();
+  return data ? rowToBook(data) : undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Knowledge queries
+// ---------------------------------------------------------------------------
+
+export async function getKnowledgePackage(slug: string): Promise<KnowledgePackage | undefined> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return undefined;
+  const { data } = await supabase
+    .from("knowledge")
+    .select("data")
+    .eq("user_id", user.id)
+    .eq("slug", slug)
+    .eq("key", "package")
+    .single();
+  return data ? (data.data as KnowledgePackage) : undefined;
+}
+
+export async function getAllKnowledgePackages(): Promise<KnowledgePackage[]> {
+  const books = await getBooks();
+  const packages = await Promise.all(books.map((b) => getKnowledgePackage(b.slug)));
+  return packages.filter((p): p is KnowledgePackage => Boolean(p));
+}
+
+export async function getBookIndex(slug: string): Promise<BookIndex | undefined> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return undefined;
+  const { data } = await supabase
+    .from("knowledge")
+    .select("data")
+    .eq("user_id", user.id)
+    .eq("slug", slug)
+    .eq("key", "index")
+    .single();
+  return data ? (data.data as BookIndex) : undefined;
+}
+
+export async function getChapterDetail(
+  slug: string,
+  chapterSlug: string,
+  lang: string = DEFAULT_LANGUAGE
+): Promise<ChapterDetail | undefined> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return undefined;
+  const key = `chapters/${chapterFileName(chapterSlug, lang)}`;
+  const { data } = await supabase
+    .from("knowledge")
+    .select("data")
+    .eq("user_id", user.id)
+    .eq("slug", slug)
+    .eq("key", key)
+    .single();
+  if (!data) return undefined;
+  const raw = data.data as Record<string, unknown>;
+  return Array.isArray(raw.sections) ? normalizeStoredChapterDetail(raw) : migrateLegacyChapterDetail(raw);
+}
+
+export async function getAllChapterDetails(
+  slug: string,
+  chapterSlug: string
+): Promise<Record<string, ChapterDetail>> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return {};
+  const { data } = await supabase
+    .from("knowledge")
+    .select("key, data")
+    .eq("user_id", user.id)
+    .eq("slug", slug)
+    .like("key", `chapters/${chapterSlug}%`);
+
+  const found: Record<string, ChapterDetail> = {};
+  for (const row of data ?? []) {
+    const filename = (row.key as string).replace("chapters/", "");
+    const lang = langFromFileName(filename, chapterSlug);
+    if (lang) {
+      const raw = row.data as Record<string, unknown>;
+      found[lang] = Array.isArray(raw.sections) ? normalizeStoredChapterDetail(raw) : migrateLegacyChapterDetail(raw);
+    }
   }
-  const raw = fs.readFileSync(libraryPath, "utf8");
-  return JSON.parse(raw) as Book[];
+  return found;
 }
 
-export function getBook(slug: string): Book | undefined {
-  return getBooks().find((book) => book.slug === slug);
+export async function getMode(slug: string, modeSlug: string): Promise<LearningMode | undefined> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return undefined;
+  const { data } = await supabase
+    .from("knowledge")
+    .select("data")
+    .eq("user_id", user.id)
+    .eq("slug", slug)
+    .eq("key", `modes/${modeSlug}`)
+    .single();
+  return data ? (data.data as LearningMode) : undefined;
 }
 
-export function getKnowledgePackage(slug: string): KnowledgePackage | undefined {
-  const filePath = path.join(knowledgeRoot, slug, "package.json");
+// ---------------------------------------------------------------------------
+// Filename helpers (unchanged from original)
+// ---------------------------------------------------------------------------
 
-  if (!fs.existsSync(filePath)) {
-    return undefined;
+// English keeps the original unsuffixed filename so existing generated chapters
+// keep working without any migration. Other languages get a [code] suffix.
+export function chapterFileName(chapterSlug: string, lang: string): string {
+  return lang === DEFAULT_LANGUAGE ? `${chapterSlug}.json` : `${chapterSlug}.${lang}.json`;
+}
+
+function langFromFileName(filename: string, chapterSlug: string): string | null {
+  if (filename === `${chapterSlug}.json`) return DEFAULT_LANGUAGE;
+  const prefix = `${chapterSlug}.`;
+  const suffix = ".json";
+  if (filename.startsWith(prefix) && filename.endsWith(suffix)) {
+    const code = filename.slice(prefix.length, -suffix.length);
+    if (LANGUAGES.some((l) => l.code === code)) return code;
   }
-
-  return JSON.parse(fs.readFileSync(filePath, "utf8")) as KnowledgePackage;
+  return null;
 }
 
-export function getAllKnowledgePackages(): KnowledgePackage[] {
-  return getBooks()
-    .map((book) => getKnowledgePackage(book.slug))
-    .filter((book): book is KnowledgePackage => Boolean(book));
-}
-
-export function getBookIndex(slug: string): BookIndex | undefined {
-  const filePath = path.join(knowledgeRoot, slug, "index.json");
-  if (!fs.existsSync(filePath)) return undefined;
-  return JSON.parse(fs.readFileSync(filePath, "utf8")) as BookIndex;
-}
-
-export function getChapterDetail(slug: string, chapterSlug: string, lang: string = DEFAULT_LANGUAGE): ChapterDetail | undefined {
-  const filePath = path.join(knowledgeRoot, slug, "chapters", chapterFileName(chapterSlug, lang));
-  if (!fs.existsSync(filePath)) return undefined;
-
-  const raw = JSON.parse(fs.readFileSync(filePath, "utf8")) as Record<string, unknown>;
-
-  // New adaptive-structure schema already has a `sections` array.
-  if (Array.isArray(raw.sections)) {
-    return normalizeStoredChapterDetail(raw);
-  }
-
-  // Legacy schema (keyIdeas/examples/actionItems as flat arrays, pre-adaptive
-  // structure) — convert so old cached chapters degrade gracefully in the new
-  // UI instead of crashing, rather than requiring every chapter regenerated.
-  return migrateLegacyChapterDetail(raw);
-}
+// ---------------------------------------------------------------------------
+// Chapter detail normalisation (unchanged from original)
+// ---------------------------------------------------------------------------
 
 function toSummaryParagraphs(value: unknown): string[] {
   if (Array.isArray(value)) return value.filter((item): item is string => typeof item === "string");
@@ -115,32 +230,4 @@ function migrateLegacyChapterDetail(raw: Record<string, unknown>): ChapterDetail
   }
 
   return detail;
-}
-
-// English keeps the original unsuffixed filename so existing generated chapters
-// keep working without any migration. Other languages get a [code] suffix.
-export function chapterFileName(chapterSlug: string, lang: string): string {
-  return lang === DEFAULT_LANGUAGE ? `${chapterSlug}.json` : `${chapterSlug}.${lang}.json`;
-}
-
-// Checks disk for every configured language, not just English — without this,
-// a page reload only ever rehydrates the English tab and any already-generated
-// Hindi/German content silently disappears even though it's still saved on disk.
-export function getAllChapterDetails(slug: string, chapterSlug: string): Record<string, ChapterDetail> {
-  const found: Record<string, ChapterDetail> = {};
-
-  for (const language of LANGUAGES) {
-    const detail = getChapterDetail(slug, chapterSlug, language.code);
-    if (detail) {
-      found[language.code] = detail;
-    }
-  }
-
-  return found;
-}
-
-export function getMode(slug: string, modeSlug: string): LearningMode | undefined {
-  const filePath = path.join(knowledgeRoot, slug, "modes", `${modeSlug}.json`);
-  if (!fs.existsSync(filePath)) return undefined;
-  return JSON.parse(fs.readFileSync(filePath, "utf8")) as LearningMode;
 }

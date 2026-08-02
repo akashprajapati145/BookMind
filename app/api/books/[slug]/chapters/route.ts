@@ -1,17 +1,12 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import { NextResponse } from "next/server";
-import { chapterFileName, getChapterDetail } from "@/lib/books";
+import { chapterFileName } from "@/lib/books";
 import { generateChapterDetail } from "@/lib/gemini";
 import { DEFAULT_LANGUAGE, LANGUAGES } from "@/lib/languages";
+import { createClient } from "@/lib/supabase/server";
 import { toSlug } from "@/lib/slug";
-import type { Book, BookIndex } from "@/lib/types";
+import type { BookIndex, ChapterDetail } from "@/lib/types";
 
 export const runtime = "nodejs";
-
-const root = process.cwd();
-const libraryPath = path.join(root, "storage", "library.json");
-const knowledgeRoot = path.join(root, "storage", "knowledge");
 
 type RouteProps = { params: Promise<{ slug: string }> };
 
@@ -26,53 +21,93 @@ export async function POST(request: Request, { params }: RouteProps) {
     return NextResponse.json({ error: "Chapter title is required." }, { status: 400 });
   }
 
-  const chapterSlug = toSlug(chapterTitle);
-  const packageRoot = path.join(knowledgeRoot, slug);
-  const chaptersDir = path.join(packageRoot, "chapters");
-  const chapterPath = path.join(chaptersDir, chapterFileName(chapterSlug, lang));
-
-  // Idempotency: return the cached file if it already exists. Goes through
-  // getChapterDetail (not a raw read) so old-schema cached chapters get the
-  // same migration applied here as on page load, instead of returning a shape
-  // the new UI doesn't know how to render.
-  const existing = getChapterDetail(slug, chapterSlug, lang);
-  if (existing) {
-    return NextResponse.json({ chapter: existing });
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const books = await readLibrary();
-  const book = books.find((b) => b.slug === slug);
+  const chapterSlug = toSlug(chapterTitle);
+  const key = `chapters/${chapterFileName(chapterSlug, lang)}`;
 
-  if (!book) {
+  // Idempotency: return cached chapter if it already exists
+  const { data: existingRow } = await supabase
+    .from("knowledge")
+    .select("data")
+    .eq("user_id", user.id)
+    .eq("slug", slug)
+    .eq("key", key)
+    .single();
+
+  if (existingRow) {
+    return NextResponse.json({ chapter: existingRow.data as ChapterDetail });
+  }
+
+  // Verify book ownership
+  const { data: bookRow } = await supabase
+    .from("books")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("slug", slug)
+    .single();
+
+  if (!bookRow) {
     return NextResponse.json({ error: "Book not found." }, { status: 404 });
   }
 
-  const indexPath = path.join(packageRoot, "index.json");
-  const indexRaw = await fs.readFile(indexPath, "utf8").catch(() => null);
+  // Load book index
+  const { data: indexRow } = await supabase
+    .from("knowledge")
+    .select("data")
+    .eq("user_id", user.id)
+    .eq("slug", slug)
+    .eq("key", "index")
+    .single();
 
-  if (!indexRaw) {
+  if (!indexRow) {
     return NextResponse.json(
       { error: "Book index not found. Generate the index first." },
       { status: 400 }
     );
   }
 
-  const bookIndex = JSON.parse(indexRaw) as BookIndex;
-  const sourcePath = path.join(packageRoot, "source.txt");
-  const sourceText = await fs.readFile(sourcePath, "utf8").catch(() => "");
+  // Download source text
+  const { data: sourceBlob } = await supabase.storage
+    .from("bookmind")
+    .download(`${user.id}/source/${slug}.txt`);
 
-  if (!sourceText.trim()) {
+  const sourceText = sourceBlob ? (await sourceBlob.text()).trim() : "";
+
+  if (!sourceText) {
     return NextResponse.json(
       { error: "No source text found. Re-upload the PDF." },
       { status: 400 }
     );
   }
 
-  try {
-    const detail = await generateChapterDetail(book, chapterTitle, sourceText, bookIndex, lang);
+  const meta = (bookRow.metadata ?? {}) as Record<string, unknown>;
+  const book = {
+    slug: bookRow.slug,
+    title: bookRow.title,
+    author: bookRow.author,
+    status: bookRow.status,
+    progress: bookRow.progress,
+    addedAt: bookRow.added_at,
+    category: (meta.category as string) ?? "Uploaded",
+    cover: (meta.cover as string) ?? bookRow.slug,
+    readingTime: (meta.readingTime as string) ?? "",
+    pdfPath: (meta.pdfPath as string) ?? undefined
+  };
 
-    await fs.mkdir(chaptersDir, { recursive: true });
-    await fs.writeFile(chapterPath, JSON.stringify(detail, null, 2));
+  try {
+    const detail = await generateChapterDetail(book, chapterTitle, sourceText, indexRow.data as BookIndex, lang);
+
+    await supabase.from("knowledge").upsert({
+      user_id: user.id,
+      slug,
+      key,
+      data: detail
+    });
 
     return NextResponse.json({ chapter: detail });
   } catch (error) {
@@ -80,13 +115,5 @@ export async function POST(request: Request, { params }: RouteProps) {
       { error: error instanceof Error ? error.message : "Chapter generation failed." },
       { status: 500 }
     );
-  }
-}
-
-async function readLibrary(): Promise<Book[]> {
-  try {
-    return JSON.parse(await fs.readFile(libraryPath, "utf8")) as Book[];
-  } catch {
-    return [];
   }
 }

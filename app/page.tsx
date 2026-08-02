@@ -5,6 +5,7 @@ import { GlassCard } from "@/components/glass-card";
 import { PageHeader } from "@/components/page-header";
 import { RecentBooksShelf } from "@/components/recent-books-shelf";
 import { getBookIndex, getBooks, getKnowledgePackage } from "@/lib/books";
+import type { Book } from "@/lib/types";
 import { routes } from "@/lib/routes";
 
 // Without this, Next.js statically pre-renders this page at build time and
@@ -12,18 +13,16 @@ import { routes } from "@/lib/routes";
 // the underlying files but never show up here without an explicit revalidate.
 export const dynamic = "force-dynamic";
 
-function getFeaturedBook(books: ReturnType<typeof getBooks>) {
-  // Skip books still stuck in the placeholder "extracted" state — they have no real
-  // thesis yet, only the stale copy written at upload time before any analysis ran.
+async function getFeaturedBook(books: Book[]) {
   const candidate = books.find((book) => book.status === "indexed" || book.status === "ready");
   if (!candidate) return null;
 
-  const bookIndex = getBookIndex(candidate.slug);
+  const bookIndex = await getBookIndex(candidate.slug);
   if (bookIndex) {
     return { slug: candidate.slug, title: candidate.title, author: candidate.author, thesis: bookIndex.thesis };
   }
 
-  const knowledge = getKnowledgePackage(candidate.slug);
+  const knowledge = await getKnowledgePackage(candidate.slug);
   if (knowledge) {
     return { slug: candidate.slug, title: candidate.title, author: candidate.author, thesis: knowledge.thesis };
   }
@@ -31,9 +30,9 @@ function getFeaturedBook(books: ReturnType<typeof getBooks>) {
   return null;
 }
 
-export default function HomePage() {
-  const books = getBooks();
-  const featured = getFeaturedBook(books);
+export default async function HomePage() {
+  const books = await getBooks();
+  const featured = await getFeaturedBook(books);
 
   return (
     <AppShell>

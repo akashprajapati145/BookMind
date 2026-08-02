@@ -10,10 +10,10 @@ type ExamplesPageProps = {
 
 export default async function ExamplesPage({ params }: ExamplesPageProps) {
   const { slug } = await params;
-  const knowledge = getKnowledgePackage(slug);
+  const knowledge = await getKnowledgePackage(slug);
 
   if (!knowledge) {
-    notFound();
+    return notFound();
   }
 
   return (

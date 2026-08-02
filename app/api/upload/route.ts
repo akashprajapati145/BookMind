@@ -1,20 +1,19 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import pdfParse from "pdf-parse";
+import { createClient } from "@/lib/supabase/server";
 import { toSlug } from "@/lib/slug";
 import type { Book, KnowledgePackage } from "@/lib/types";
 
 export const runtime = "nodejs";
 
-const root = process.cwd();
-const storageRoot = path.join(root, "storage");
-const booksRoot = path.join(storageRoot, "books");
-const knowledgeRoot = path.join(storageRoot, "knowledge");
-const libraryPath = path.join(storageRoot, "library.json");
-
 export async function POST(request: Request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   const formData = await request.formData();
   const file = formData.get("file");
   const titleValue = String(formData.get("title") || "");
@@ -28,20 +27,37 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Only PDF uploads are supported in the MVP." }, { status: 400 });
   }
 
-  await fs.mkdir(booksRoot, { recursive: true });
-  await fs.mkdir(knowledgeRoot, { recursive: true });
-
   const fallbackTitle = file.name.replace(/\.pdf$/i, "").replace(/[-_]+/g, " ");
   const title = titleValue.trim() || fallbackTitle || "Untitled Book";
   const baseSlug = toSlug(title) || "uploaded-book";
-  const existingBooks = await readLibrary();
-  const slug = uniqueSlug(baseSlug, existingBooks);
-  const pdfPath = path.join(booksRoot, `${slug}.pdf`);
+
+  // Check for slug uniqueness against this user's existing books
+  const { data: existingBooks } = await supabase
+    .from("books")
+    .select("slug")
+    .eq("user_id", user.id);
+  const usedSlugs = new Set((existingBooks ?? []).map((b: { slug: string }) => b.slug));
+  const slug = uniqueSlug(baseSlug, usedSlugs);
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(pdfPath, bytes);
   const extractedText = await extractPdfText(bytes);
   const wordCount = countWords(extractedText);
+
+  // Upload PDF to Supabase Storage
+  const pdfStoragePath = `${user.id}/books/${slug}.pdf`;
+  const { error: pdfUploadError } = await supabase.storage
+    .from("bookmind")
+    .upload(pdfStoragePath, bytes, { contentType: "application/pdf", upsert: true });
+
+  if (pdfUploadError) {
+    return NextResponse.json({ error: "Failed to upload PDF." }, { status: 500 });
+  }
+
+  // Upload extracted source text to Storage
+  const sourceStoragePath = `${user.id}/source/${slug}.txt`;
+  await supabase.storage
+    .from("bookmind")
+    .upload(sourceStoragePath, extractedText, { contentType: "text/plain", upsert: true });
 
   const book: Book = {
     slug,
@@ -53,41 +69,45 @@ export async function POST(request: Request) {
     status: "extracted",
     progress: 0,
     addedAt: new Date().toISOString(),
-    pdfPath: `storage/books/${slug}.pdf`
+    pdfPath: pdfStoragePath
   };
 
-  const packageRoot = path.join(knowledgeRoot, slug);
-  await fs.mkdir(packageRoot, { recursive: true });
-  await fs.writeFile(path.join(packageRoot, "source.txt"), extractedText);
-  await fs.writeFile(
-    path.join(packageRoot, "extraction.json"),
-    JSON.stringify(
-      {
-        fileName: file.name,
-        bytes: bytes.length,
-        wordCount,
-        extractedAt: new Date().toISOString()
-      },
-      null,
-      2
-    )
-  );
-  await fs.writeFile(path.join(packageRoot, "package.json"), JSON.stringify(createPlaceholderKnowledge(book, wordCount), null, 2));
-  await fs.writeFile(libraryPath, JSON.stringify([book, ...existingBooks], null, 2));
+  // Insert book metadata into the database
+  const { error: dbError } = await supabase.from("books").insert({
+    user_id: user.id,
+    slug,
+    title,
+    author: book.author,
+    status: "extracted",
+    progress: 0,
+    added_at: book.addedAt,
+    metadata: {
+      category: "Uploaded",
+      cover: slug,
+      readingTime: book.readingTime,
+      pdfPath: pdfStoragePath,
+      wordCount
+    }
+  });
 
-  // Without this, "/" and "/library" can keep serving a statically cached page
-  // from build time that doesn't include the newly uploaded book — same root
-  // cause as the earlier delete bug, just on the upload side.
+  if (dbError) {
+    return NextResponse.json({ error: "Failed to save book." }, { status: 500 });
+  }
+
+  // Insert placeholder knowledge package
+  await supabase.from("knowledge").insert({
+    user_id: user.id,
+    slug,
+    key: "package",
+    data: createPlaceholderKnowledge(book, wordCount)
+  });
+
   revalidatePath("/");
   revalidatePath("/library");
 
   return NextResponse.json({ book });
 }
 
-// Avoids depending on the global `File` constructor — it's not consistently
-// available as a bare global across Node versions/runtimes (it crashed with
-// "ReferenceError: File is not defined" on Railway's Node build despite working
-// locally on Windows). Checking the shape we actually use is environment-proof.
 function isUploadedFile(value: FormDataEntryValue | null): value is File {
   return Boolean(
     value &&
@@ -115,53 +135,30 @@ function countWords(text: string) {
 }
 
 function estimateReadingTime(wordCount: number) {
-  if (wordCount <= 0) {
-    return "Text extracted";
-  }
-
+  if (wordCount <= 0) return "Text extracted";
   const minutes = Math.max(1, Math.ceil(wordCount / 225));
-
-  if (minutes < 60) {
-    return `${minutes} min`;
-  }
-
+  if (minutes < 60) return `${minutes} min`;
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
   return remainingMinutes ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 }
 
-async function readLibrary(): Promise<Book[]> {
-  try {
-    return JSON.parse(await fs.readFile(libraryPath, "utf8")) as Book[];
-  } catch {
-    return [];
-  }
-}
-
-function uniqueSlug(baseSlug: string, books: Book[]) {
-  const used = new Set(books.map((book) => book.slug));
-
-  if (!used.has(baseSlug)) {
-    return baseSlug;
-  }
-
+function uniqueSlug(baseSlug: string, used: Set<string>) {
+  if (!used.has(baseSlug)) return baseSlug;
   let index = 2;
-  while (used.has(`${baseSlug}-${index}`)) {
-    index += 1;
-  }
-
+  while (used.has(`${baseSlug}-${index}`)) index += 1;
   return `${baseSlug}-${index}`;
 }
 
 function createPlaceholderKnowledge(book: Book, wordCount: number): KnowledgePackage {
   return {
     book,
-    thesis: "This PDF has been uploaded and its text has been extracted locally. Google Gemini generation is the next milestone.",
-    framework: "Extracted source text is stored permanently and will be transformed into learning modes, concepts, examples, chapters, and actions.",
+    thesis: "This PDF has been uploaded and its text has been extracted. Knowledge generation is the next step.",
+    framework: "Extracted source text is stored and will be transformed into learning modes, concepts, examples, chapters, and actions.",
     overview: [
-      "The source PDF is stored locally.",
+      "The source PDF is stored in Supabase Storage.",
       `BookMind extracted approximately ${wordCount.toLocaleString()} words from the PDF.`,
-      "The next step is Google Gemini generation for learning modes, concepts, examples, chapters, and actions."
+      "The next step is AI knowledge generation for learning modes, concepts, examples, chapters, and actions."
     ],
     learningModes: [
       {
@@ -170,7 +167,7 @@ function createPlaceholderKnowledge(book: Book, wordCount: number): KnowledgePac
         title: "Learn in 1 Minute",
         duration: "1 min",
         summary: "Pending knowledge generation.",
-        sections: [{ title: "Extracted", items: ["Upload complete.", "Source text extracted.", "Google Gemini generation is next."] }]
+        sections: [{ title: "Extracted", items: ["Upload complete.", "Source text extracted.", "Knowledge generation is next."] }]
       },
       {
         slug: "10",
@@ -194,17 +191,17 @@ function createPlaceholderKnowledge(book: Book, wordCount: number): KnowledgePac
         title: "Full Depth",
         duration: "Full",
         summary: "Pending knowledge generation.",
-        sections: [{ title: "Extracted", items: ["Full knowledge package generation is queued for the Google Gemini milestone."] }]
+        sections: [{ title: "Extracted", items: ["Full knowledge package generation is queued."] }]
       }
     ],
-    journey: [{ title: "Extracted", description: "The PDF has been saved and converted into local source text." }],
+    journey: [{ title: "Extracted", description: "The PDF has been saved and converted into source text." }],
     contents: [{ title: "Pending Generation", chapters: ["Chapter hierarchy will be generated from extracted source text."] }],
     chapters: [],
     concepts: [],
     examples: [],
     actions: {
       tomorrow: ["Review extracted source text."],
-      thisWeek: ["Generate the first Google Gemini knowledge package."],
+      thisWeek: ["Generate the first knowledge package."],
       thisMonth: ["Refine examples and chapter navigation."]
     }
   };

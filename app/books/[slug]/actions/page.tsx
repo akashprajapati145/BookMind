@@ -10,10 +10,10 @@ type ActionsPageProps = {
 
 export default async function ActionsPage({ params }: ActionsPageProps) {
   const { slug } = await params;
-  const knowledge = getKnowledgePackage(slug);
+  const knowledge = await getKnowledgePackage(slug);
 
   if (!knowledge) {
-    notFound();
+    return notFound();
   }
 
   const groups = [

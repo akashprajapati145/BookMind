@@ -1,76 +1,112 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import { NextResponse } from "next/server";
 import { generateBookIndex } from "@/lib/gemini";
-import type { Book, BookIndex } from "@/lib/types";
+import { createClient } from "@/lib/supabase/server";
+import type { BookIndex } from "@/lib/types";
 
 export const runtime = "nodejs";
-
-const root = process.cwd();
-const libraryPath = path.join(root, "storage", "library.json");
-const knowledgeRoot = path.join(root, "storage", "knowledge");
 
 type RouteProps = { params: Promise<{ slug: string }> };
 
 export async function POST(_request: Request, { params }: RouteProps) {
   const { slug } = await params;
 
-  const packageRoot = path.join(knowledgeRoot, slug);
-  const indexPath = path.join(packageRoot, "index.json");
-
-  // Idempotency: return cached index if it already exists
-  const existing = await fs.readFile(indexPath, "utf8").catch(() => null);
-  if (existing) {
-    return NextResponse.json({ index: JSON.parse(existing) as BookIndex });
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const books = await readLibrary();
-  const book = books.find((b) => b.slug === slug);
+  // Idempotency: return cached index if it already exists
+  const { data: existingRow } = await supabase
+    .from("knowledge")
+    .select("data")
+    .eq("user_id", user.id)
+    .eq("slug", slug)
+    .eq("key", "index")
+    .single();
 
-  if (!book) {
+  if (existingRow) {
+    return NextResponse.json({ index: existingRow.data as BookIndex });
+  }
+
+  // Verify book ownership
+  const { data: bookRow } = await supabase
+    .from("books")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("slug", slug)
+    .single();
+
+  if (!bookRow) {
     return NextResponse.json({ error: "Book not found." }, { status: 404 });
   }
 
-  const sourcePath = path.join(packageRoot, "source.txt");
-  const sourceText = await fs.readFile(sourcePath, "utf8").catch(() => "");
+  // Download source text from Supabase Storage
+  const { data: sourceBlob } = await supabase.storage
+    .from("bookmind")
+    .download(`${user.id}/source/${slug}.txt`);
 
-  if (!sourceText.trim()) {
+  const sourceText = sourceBlob ? (await sourceBlob.text()).trim() : "";
+
+  if (!sourceText) {
     return NextResponse.json(
       { error: "No extracted source text found. Re-upload the PDF." },
       { status: 400 }
     );
   }
 
-  // Mark as processing so the UI can show the right state
-  await writeLibrary(books.map((b) => (b.slug === slug ? { ...b, status: "processing" } : b)));
+  // Mark as processing
+  await supabase
+    .from("books")
+    .update({ status: "processing" })
+    .eq("user_id", user.id)
+    .eq("slug", slug);
+
+  // Build a Book object from the row for Gemini
+  const meta = (bookRow.metadata ?? {}) as Record<string, unknown>;
+  const book = {
+    slug: bookRow.slug,
+    title: bookRow.title,
+    author: bookRow.author,
+    status: bookRow.status,
+    progress: bookRow.progress,
+    addedAt: bookRow.added_at,
+    category: (meta.category as string) ?? "Uploaded",
+    cover: (meta.cover as string) ?? bookRow.slug,
+    readingTime: (meta.readingTime as string) ?? "",
+    pdfPath: (meta.pdfPath as string) ?? undefined
+  };
 
   try {
     const bookIndex = await generateBookIndex(book, sourceText);
 
-    await fs.writeFile(indexPath, JSON.stringify(bookIndex, null, 2));
-    await writeLibrary(
-      books.map((b) => (b.slug === slug ? { ...bookIndex.book } : b))
-    );
+    // Save index to knowledge table
+    await supabase.from("knowledge").upsert({
+      user_id: user.id,
+      slug,
+      key: "index",
+      data: bookIndex
+    });
+
+    // Update book status to indexed
+    await supabase
+      .from("books")
+      .update({ status: "indexed" })
+      .eq("user_id", user.id)
+      .eq("slug", slug);
 
     return NextResponse.json({ index: bookIndex });
   } catch (error) {
-    // Roll back status to extracted so the user can retry
-    await writeLibrary(books.map((b) => (b.slug === slug ? { ...b, status: "extracted" } : b)));
+    // Roll back status so the user can retry
+    await supabase
+      .from("books")
+      .update({ status: "extracted" })
+      .eq("user_id", user.id)
+      .eq("slug", slug);
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Index generation failed." },
       { status: 500 }
     );
   }
-}
-
-async function readLibrary(): Promise<Book[]> {
-  try {
-    return JSON.parse(await fs.readFile(libraryPath, "utf8")) as Book[];
-  } catch {
-    return [];
-  }
-}
-
-async function writeLibrary(books: Book[]) {
-  await fs.writeFile(libraryPath, JSON.stringify(books, null, 2));
 }

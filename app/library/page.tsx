@@ -10,8 +10,8 @@ import { routes } from "@/lib/routes";
 // the underlying files but never show up here without an explicit revalidate.
 export const dynamic = "force-dynamic";
 
-export default function LibraryPage() {
-  const books = getBooks();
+export default async function LibraryPage() {
+  const books = await getBooks();
 
   return (
     <AppShell>

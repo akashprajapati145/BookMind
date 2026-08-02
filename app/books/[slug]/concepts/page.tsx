@@ -10,10 +10,10 @@ type ConceptsPageProps = {
 
 export default async function ConceptsPage({ params }: ConceptsPageProps) {
   const { slug } = await params;
-  const knowledge = getKnowledgePackage(slug);
+  const knowledge = await getKnowledgePackage(slug);
 
   if (!knowledge) {
-    notFound();
+    return notFound();
   }
 
   return (

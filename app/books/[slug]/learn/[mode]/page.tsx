@@ -15,11 +15,11 @@ type LearnPageProps = {
 export default async function LearnPage({ params }: LearnPageProps) {
   const { slug, mode } = await params;
 
-  const bookIndex = getBookIndex(slug);
-  const knowledge = bookIndex ? null : getKnowledgePackage(slug);
+  const bookIndex = await getBookIndex(slug);
+  const knowledge = bookIndex ? null : await getKnowledgePackage(slug);
 
   if (!bookIndex && !knowledge) {
-    notFound();
+    return notFound();
   }
 
   const bookTitle = bookIndex?.book.title ?? knowledge!.book.title;
@@ -27,11 +27,14 @@ export default async function LearnPage({ params }: LearnPageProps) {
   let learningMode: LearningMode | undefined;
 
   if (bookIndex) {
-    // Flash mode lives in the index. 10/30 are generated on demand and
-    // cached to modes/[mode].json — check disk before ever calling Gemini.
-    // "full" was removed — it duplicated Overview + Chapters while being the
-    // single most expensive generation call (whole-book prompt, most likely to hit quota).
-    learningMode = mode === "1" ? bookIndex.flashMode : getMode(slug, mode);
+    // Flash mode lives in the index. 10/30 are generated on demand and cached in the
+    // knowledge table. "full" was removed — it duplicated Overview + Chapters while being
+    // the single most expensive generation call (most likely to hit quota).
+    if (mode === "1") {
+      learningMode = bookIndex.flashMode;
+    } else {
+      learningMode = await getMode(slug, mode);
+    }
   } else {
     learningMode = knowledge!.learningModes.find((m) => m.slug === mode);
   }
