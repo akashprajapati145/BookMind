@@ -27,6 +27,11 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const { pathname } = request.nextUrl;
 
+  // Public routes — no auth required
+  if (pathname.startsWith("/demo")) {
+    return supabaseResponse;
+  }
+
   // On auth pages: redirect logged-in users to home
   if (pathname.startsWith("/auth")) {
     if (user) {
