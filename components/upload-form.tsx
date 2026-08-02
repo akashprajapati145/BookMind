@@ -19,7 +19,7 @@ export function UploadForm() {
     }
 
     setStatus("uploading");
-    setMessage("Saving PDF to local storage...");
+    setMessage("Uploading...");
 
     const formData = new FormData();
     formData.append("file", file);

@@ -6,6 +6,7 @@ import { toSlug } from "@/lib/slug";
 import type { Book, KnowledgePackage } from "@/lib/types";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const supabase = await createClient();
