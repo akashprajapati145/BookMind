@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 export function UploadForm() {
   const [title, setTitle] = useState("");
@@ -19,27 +20,63 @@ export function UploadForm() {
     }
 
     setStatus("uploading");
-    setMessage("Uploading...");
+    setMessage("Preparing upload...");
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("title", title);
-    formData.append("author", author);
-
-    const response = await fetch("/api/upload", {
+    // Step 1: Get a signed upload URL from our API (also generates a unique slug)
+    const presignRes = await fetch("/api/upload/presign", {
       method: "POST",
-      body: formData
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, fileName: file.name })
     });
 
-    if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    if (!presignRes.ok) {
+      const body = await presignRes.json().catch(() => null) as { error?: string } | null;
+      setStatus("error");
+      setMessage(body?.error || "Failed to prepare upload.");
+      return;
+    }
+
+    const { token, storagePath, slug } = await presignRes.json() as {
+      token: string;
+      storagePath: string;
+      slug: string;
+    };
+
+    // Step 2: Upload PDF directly to Supabase Storage — bypasses Vercel's 4.5MB body limit
+    setMessage("Uploading PDF...");
+    const supabase = createClient();
+    const { error: uploadError } = await supabase.storage
+      .from("bookmind")
+      .uploadToSignedUrl(storagePath, token, file, { contentType: "application/pdf" });
+
+    if (uploadError) {
+      setStatus("error");
+      setMessage(uploadError.message || "Failed to upload PDF.");
+      return;
+    }
+
+    // Step 3: Tell the API to extract text and save metadata — only sends small JSON
+    setMessage("Processing PDF...");
+    const processRes = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        slug,
+        storagePath,
+        title: title.trim() || file.name.replace(/\.pdf$/i, ""),
+        author
+      })
+    });
+
+    if (!processRes.ok) {
+      const body = await processRes.json().catch(() => null) as { error?: string } | null;
       setStatus("error");
       setMessage(body?.error || "Upload failed.");
       return;
     }
 
     setStatus("done");
-    setMessage("Upload saved. The book is now in your library.");
+    setMessage("Upload complete! Redirecting to your library...");
     window.location.href = "/library";
   }
 
@@ -67,7 +104,9 @@ export function UploadForm() {
 
       <label className="flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-primary/40 bg-white/5 p-8 text-center transition hover:border-primary hover:bg-primary/10">
         <span className="text-lg font-bold text-on-background">{file ? file.name : "Choose PDF"}</span>
-        <span className="mt-2 text-sm text-on-surface-variant">Stored locally under storage/books</span>
+        <span className="mt-2 text-sm text-on-surface-variant">
+          {file ? `${(file.size / 1024 / 1024).toFixed(1)} MB` : "Any size — uploaded directly to storage"}
+        </span>
         <input
           className="sr-only"
           type="file"

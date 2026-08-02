@@ -2,12 +2,13 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import pdfParse from "pdf-parse";
 import { createClient } from "@/lib/supabase/server";
-import { toSlug } from "@/lib/slug";
 import type { Book, KnowledgePackage } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+// Receives JSON after the PDF has been uploaded directly to Supabase Storage by the client.
+// Only handles text extraction + DB writes — the large PDF never passes through Vercel.
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -15,70 +16,56 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const formData = await request.formData();
-  const file = formData.get("file");
-  const titleValue = String(formData.get("title") || "");
-  const authorValue = String(formData.get("author") || "Unknown Author");
+  const body = await request.json();
+  const { slug, storagePath, title, author: authorValue } = body as {
+    slug: string;
+    storagePath: string;
+    title: string;
+    author?: string;
+  };
 
-  if (!isUploadedFile(file)) {
-    return NextResponse.json({ error: "A PDF file is required." }, { status: 400 });
+  if (!slug || !storagePath || !title) {
+    return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
   }
 
-  if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-    return NextResponse.json({ error: "Only PDF uploads are supported in the MVP." }, { status: 400 });
+  // Download PDF from Supabase Storage for text extraction
+  const { data: pdfBlob, error: downloadError } = await supabase.storage
+    .from("bookmind")
+    .download(storagePath);
+
+  if (downloadError || !pdfBlob) {
+    return NextResponse.json({ error: "Failed to read uploaded PDF." }, { status: 500 });
   }
 
-  const fallbackTitle = file.name.replace(/\.pdf$/i, "").replace(/[-_]+/g, " ");
-  const title = titleValue.trim() || fallbackTitle || "Untitled Book";
-  const baseSlug = toSlug(title) || "uploaded-book";
-
-  // Check for slug uniqueness against this user's existing books
-  const { data: existingBooks } = await supabase
-    .from("books")
-    .select("slug")
-    .eq("user_id", user.id);
-  const usedSlugs = new Set((existingBooks ?? []).map((b: { slug: string }) => b.slug));
-  const slug = uniqueSlug(baseSlug, usedSlugs);
-
-  const bytes = Buffer.from(await file.arrayBuffer());
+  const bytes = Buffer.from(await pdfBlob.arrayBuffer());
   const extractedText = await extractPdfText(bytes);
   const wordCount = countWords(extractedText);
 
-  // Upload PDF to Supabase Storage
-  const pdfStoragePath = `${user.id}/books/${slug}.pdf`;
-  const { error: pdfUploadError } = await supabase.storage
-    .from("bookmind")
-    .upload(pdfStoragePath, bytes, { contentType: "application/pdf", upsert: true });
-
-  if (pdfUploadError) {
-    return NextResponse.json({ error: "Failed to upload PDF." }, { status: 500 });
-  }
-
-  // Upload extracted source text to Storage
-  const sourceStoragePath = `${user.id}/source/${slug}.txt`;
+  // Store extracted text in Supabase Storage
   await supabase.storage
     .from("bookmind")
-    .upload(sourceStoragePath, extractedText, { contentType: "text/plain", upsert: true });
+    .upload(`${user.id}/source/${slug}.txt`, extractedText, { contentType: "text/plain", upsert: true });
+
+  const author = (authorValue || "Unknown Author").trim() || "Unknown Author";
 
   const book: Book = {
     slug,
     title,
-    author: authorValue.trim() || "Unknown Author",
+    author,
     category: "Uploaded",
     cover: slug,
     readingTime: estimateReadingTime(wordCount),
     status: "extracted",
     progress: 0,
     addedAt: new Date().toISOString(),
-    pdfPath: pdfStoragePath
+    pdfPath: storagePath
   };
 
-  // Insert book metadata into the database
   const { error: dbError } = await supabase.from("books").insert({
     user_id: user.id,
     slug,
     title,
-    author: book.author,
+    author,
     status: "extracted",
     progress: 0,
     added_at: book.addedAt,
@@ -86,7 +73,7 @@ export async function POST(request: Request) {
       category: "Uploaded",
       cover: slug,
       readingTime: book.readingTime,
-      pdfPath: pdfStoragePath,
+      pdfPath: storagePath,
       wordCount
     }
   });
@@ -95,7 +82,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to save book." }, { status: 500 });
   }
 
-  // Insert placeholder knowledge package
   await supabase.from("knowledge").insert({
     user_id: user.id,
     slug,
@@ -109,25 +95,12 @@ export async function POST(request: Request) {
   return NextResponse.json({ book });
 }
 
-function isUploadedFile(value: FormDataEntryValue | null): value is File {
-  return Boolean(
-    value &&
-    typeof value === "object" &&
-    "arrayBuffer" in value &&
-    typeof (value as { arrayBuffer?: unknown }).arrayBuffer === "function" &&
-    "name" in value &&
-    "type" in value
-  );
-}
-
 async function extractPdfText(bytes: Buffer) {
   const result = await pdfParse(bytes);
   const text = result.text.trim();
-
   if (!text) {
     return "No selectable text was extracted from this PDF. It may be scanned or image-based.";
   }
-
   return text;
 }
 
@@ -144,13 +117,6 @@ function estimateReadingTime(wordCount: number) {
   return remainingMinutes ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 }
 
-function uniqueSlug(baseSlug: string, used: Set<string>) {
-  if (!used.has(baseSlug)) return baseSlug;
-  let index = 2;
-  while (used.has(`${baseSlug}-${index}`)) index += 1;
-  return `${baseSlug}-${index}`;
-}
-
 function createPlaceholderKnowledge(book: Book, wordCount: number): KnowledgePackage {
   return {
     book,
@@ -159,41 +125,13 @@ function createPlaceholderKnowledge(book: Book, wordCount: number): KnowledgePac
     overview: [
       "The source PDF is stored in Supabase Storage.",
       `BookMind extracted approximately ${wordCount.toLocaleString()} words from the PDF.`,
-      "The next step is AI knowledge generation for learning modes, concepts, examples, chapters, and actions."
+      "The next step is AI knowledge generation."
     ],
     learningModes: [
-      {
-        slug: "1",
-        label: "Flash",
-        title: "Learn in 1 Minute",
-        duration: "1 min",
-        summary: "Pending knowledge generation.",
-        sections: [{ title: "Extracted", items: ["Upload complete.", "Source text extracted.", "Knowledge generation is next."] }]
-      },
-      {
-        slug: "10",
-        label: "Core",
-        title: "Learn in 10 Minutes",
-        duration: "10 min",
-        summary: "Pending knowledge generation.",
-        sections: [{ title: "Extracted", items: ["Core framework will be generated from the extracted text."] }]
-      },
-      {
-        slug: "30",
-        label: "Deep",
-        title: "Learn in 30 Minutes",
-        duration: "30 min",
-        summary: "Pending knowledge generation.",
-        sections: [{ title: "Extracted", items: ["Detailed understanding will be generated from the extracted text."] }]
-      },
-      {
-        slug: "full",
-        label: "Library",
-        title: "Full Depth",
-        duration: "Full",
-        summary: "Pending knowledge generation.",
-        sections: [{ title: "Extracted", items: ["Full knowledge package generation is queued."] }]
-      }
+      { slug: "1", label: "Flash", title: "Learn in 1 Minute", duration: "1 min", summary: "Pending knowledge generation.", sections: [{ title: "Extracted", items: ["Upload complete.", "Source text extracted.", "Knowledge generation is next."] }] },
+      { slug: "10", label: "Core", title: "Learn in 10 Minutes", duration: "10 min", summary: "Pending knowledge generation.", sections: [{ title: "Extracted", items: ["Core framework will be generated from the extracted text."] }] },
+      { slug: "30", label: "Deep", title: "Learn in 30 Minutes", duration: "30 min", summary: "Pending knowledge generation.", sections: [{ title: "Extracted", items: ["Detailed understanding will be generated from the extracted text."] }] },
+      { slug: "full", label: "Library", title: "Full Depth", duration: "Full", summary: "Pending knowledge generation.", sections: [{ title: "Extracted", items: ["Full knowledge package generation is queued."] }] }
     ],
     journey: [{ title: "Extracted", description: "The PDF has been saved and converted into source text." }],
     contents: [{ title: "Pending Generation", chapters: ["Chapter hierarchy will be generated from extracted source text."] }],
