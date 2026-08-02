@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DemoBanner } from "@/components/demo-banner";
+
 import { AppShell } from "@/components/app-shell";
 import { BookCard } from "@/components/book-card";
 import { PageHeader } from "@/components/page-header";
@@ -59,9 +60,7 @@ export default async function DemoPage() {
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {books.map((book) => (
-              <Link key={book.slug} href={`/demo/${book.slug}`}>
-                <BookCard book={book} />
-              </Link>
+              <BookCard key={book.slug} book={book} href={`/demo/${book.slug}`} />
             ))}
           </div>
         )}

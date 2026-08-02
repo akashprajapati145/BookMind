@@ -7,6 +7,7 @@ import type { Book } from "@/lib/types";
 
 type BookCardProps = {
   book: Book;
+  href?: string;
 };
 
 const statusLabels: Record<Book["status"], string> = {
@@ -17,9 +18,9 @@ const statusLabels: Record<Book["status"], string> = {
   failed: "Failed"
 };
 
-export function BookCard({ book }: BookCardProps) {
+export function BookCard({ book, href }: BookCardProps) {
   return (
-    <Link href={routes.book(book.slug)} className="group block h-full min-w-[220px]">
+    <Link href={href ?? routes.book(book.slug)} className="group block h-full min-w-[220px]">
       <GlassCard className="flex h-full flex-col overflow-hidden transition duration-300 group-hover:scale-[1.02] group-hover:border-primary/40 group-hover:shadow-glow">
         <BookCover title={book.title} author={book.author} className="rounded-b-none border-0" />
         <div className="flex flex-1 flex-col justify-between gap-3 p-4">
