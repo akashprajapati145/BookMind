@@ -14,19 +14,18 @@ type ChapterDetailLoaderProps = {
 };
 
 export function ChapterDetailLoader({ slug, chapterTitle, initialDetails }: ChapterDetailLoaderProps) {
-  // English keeps its original, unchanged flow: a single manual "Load" button,
-  // nothing automatic. Once loaded it becomes the first entry in `detailByLang`.
-  const [englishStatus, setEnglishStatus] = useState<"idle" | "loading" | "error">("idle");
-  const [englishError, setEnglishError] = useState("");
   const [detailByLang, setDetailByLang] = useState<Record<string, ChapterDetail>>(
     initialDetails ?? {}
   );
   const [activeLang, setActiveLang] = useState(DEFAULT_LANGUAGE);
 
-  // Dropdown + Generate flow for every language beyond English. A language only
-  // becomes a clickable tag once its content actually exists — selecting an
-  // existing tag only switches the view, it never triggers generation.
-  const pendingLanguages = LANGUAGES.filter((l) => l.code !== DEFAULT_LANGUAGE && !detailByLang[l.code]);
+  // Language chosen before the first generation — user picks this upfront to avoid wasting an API call
+  const [firstLang, setFirstLang] = useState(DEFAULT_LANGUAGE);
+  const [firstStatus, setFirstStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [firstError, setFirstError] = useState("");
+
+  // Dropdown + Generate flow for additional languages after the first is loaded.
+  const pendingLanguages = LANGUAGES.filter((l) => !detailByLang[l.code]);
   const [selectedPending, setSelectedPending] = useState(pendingLanguages[0]?.code ?? "");
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState("");
@@ -49,15 +48,16 @@ export function ChapterDetailLoader({ slug, chapterTitle, initialDetails }: Chap
     return data.chapter;
   }
 
-  async function loadEnglish() {
-    setEnglishStatus("loading");
+  async function loadFirst() {
+    setFirstStatus("loading");
     try {
-      const detail = await fetchChapter(DEFAULT_LANGUAGE);
-      setDetailByLang((prev) => ({ ...prev, [DEFAULT_LANGUAGE]: detail }));
-      setActiveLang(DEFAULT_LANGUAGE);
+      const detail = await fetchChapter(firstLang);
+      setDetailByLang((prev) => ({ ...prev, [firstLang]: detail }));
+      setActiveLang(firstLang);
+      setSelectedPending(LANGUAGES.find((l) => !detailByLang[l.code] && l.code !== firstLang)?.code ?? "");
     } catch (error) {
-      setEnglishError(error instanceof Error ? error.message : "Failed to load chapter summary.");
-      setEnglishStatus("error");
+      setFirstError(error instanceof Error ? error.message : "Failed to load chapter summary.");
+      setFirstStatus("error");
     }
   }
 
@@ -69,7 +69,7 @@ export function ChapterDetailLoader({ slug, chapterTitle, initialDetails }: Chap
       const detail = await fetchChapter(selectedPending);
       setDetailByLang((prev) => ({ ...prev, [selectedPending]: detail }));
       setActiveLang(selectedPending);
-      const nextPending = LANGUAGES.find((l) => l.code !== DEFAULT_LANGUAGE && l.code !== selectedPending && !detailByLang[l.code]);
+      const nextPending = LANGUAGES.find((l) => l.code !== selectedPending && !detailByLang[l.code]);
       setSelectedPending(nextPending?.code ?? "");
     } catch (error) {
       setGenerateError(error instanceof Error ? error.message : "Generation failed.");
@@ -78,32 +78,48 @@ export function ChapterDetailLoader({ slug, chapterTitle, initialDetails }: Chap
     }
   }
 
-  const englishLoaded = Boolean(detailByLang[DEFAULT_LANGUAGE]);
+  const anyLoaded = Object.keys(detailByLang).length > 0;
 
   return (
     <div className="space-y-4">
-      {!englishLoaded ? (
+      {!anyLoaded ? (
         <>
-          {englishStatus === "idle" ? (
-            <button
-              type="button"
-              onClick={loadEnglish}
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-bold text-on-surface-variant transition hover:border-primary/40 hover:text-on-background"
-            >
-              Load chapter summary
-            </button>
+          {firstStatus === "idle" ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative inline-flex">
+                <select
+                  value={firstLang}
+                  onChange={(e) => setFirstLang(e.target.value)}
+                  className="appearance-none rounded-full border border-white/10 bg-white/5 py-2 pl-4 pr-8 text-sm font-semibold text-on-background outline-none focus:border-primary/40"
+                >
+                  {LANGUAGES.map((l) => (
+                    <option key={l.code} value={l.code} className="bg-background text-on-background">{l.label}</option>
+                  ))}
+                </select>
+                <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </div>
+              <button
+                type="button"
+                onClick={loadFirst}
+                className="rounded-full border border-white/10 px-4 py-2 text-sm font-bold text-on-surface-variant transition hover:border-primary/40 hover:text-on-background"
+              >
+                Load chapter summary
+              </button>
+            </div>
           ) : null}
 
-          {englishStatus === "loading" ? (
+          {firstStatus === "loading" ? (
             <p className="animate-pulse text-sm font-semibold text-secondary">Analyzing chapter...</p>
           ) : null}
 
-          {englishStatus === "error" ? (
+          {firstStatus === "error" ? (
             <div className="space-y-2">
-              <p className="text-sm text-red-300">{englishError}</p>
+              <p className="text-sm text-red-300">{firstError}</p>
               <button
                 type="button"
-                onClick={loadEnglish}
+                onClick={loadFirst}
                 className="rounded-full border border-white/10 px-4 py-2 text-sm font-bold text-on-surface-variant hover:border-primary/40"
               >
                 Retry
