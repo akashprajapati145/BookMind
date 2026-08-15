@@ -1,19 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DEFAULT_LANGUAGE, LANGUAGES } from "@/lib/languages";
 import type { ChapterDetail, ChapterSection } from "@/lib/types";
 
 type ChapterDetailLoaderProps = {
   slug: string;
   chapterTitle: string;
-  // Every language already generated and saved on disk, keyed by language code —
-  // not just English. Without this, a page reload would only ever rehydrate
-  // English and any previously generated Hindi/German content would appear gone.
   initialDetails?: Record<string, ChapterDetail>;
+  isDone?: boolean;
+  onToggleDone?: () => void;
 };
 
-export function ChapterDetailLoader({ slug, chapterTitle, initialDetails }: ChapterDetailLoaderProps) {
+export function ChapterDetailLoader({ slug, chapterTitle, initialDetails, isDone, onToggleDone }: ChapterDetailLoaderProps) {
+  const [readingMode, setReadingMode] = useState(false);
+
+  // Close reading mode on Escape
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) { if (e.key === "Escape") setReadingMode(false); }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, []);
   const [detailByLang, setDetailByLang] = useState<Record<string, ChapterDetail>>(
     initialDetails ?? {}
   );
@@ -149,7 +156,58 @@ export function ChapterDetailLoader({ slug, chapterTitle, initialDetails }: Chap
             </div>
           ) : null}
 
+          {/* Action bar: reading mode + mark done */}
+          {detailByLang[activeLang] ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setReadingMode(true)}
+                className="flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-bold text-on-surface-variant transition hover:border-primary/40 hover:text-on-background"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                </svg>
+                Reading mode
+              </button>
+              {onToggleDone && (
+                <button
+                  type="button"
+                  onClick={onToggleDone}
+                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+                    isDone
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-white/10 text-on-surface-variant hover:border-primary/40 hover:text-on-background"
+                  }`}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  {isDone ? "Done" : "Mark done"}
+                </button>
+              )}
+            </div>
+          ) : null}
+
           {detailByLang[activeLang] ? <ChapterContent detail={detailByLang[activeLang]} /> : null}
+
+          {/* Reading mode overlay */}
+          {readingMode && detailByLang[activeLang] ? (
+            <div className="fixed inset-0 z-50 overflow-y-auto bg-background">
+              <div className="mx-auto max-w-2xl px-6 py-12">
+                <div className="mb-8 flex items-center justify-between">
+                  <h2 className="font-display text-2xl font-bold text-on-background">{chapterTitle}</h2>
+                  <button
+                    type="button"
+                    onClick={() => setReadingMode(false)}
+                    className="rounded-full border border-white/10 px-4 py-2 text-sm font-bold text-on-surface-variant hover:bg-white/5"
+                  >
+                    ✕ Close
+                  </button>
+                </div>
+                <ChapterContent detail={detailByLang[activeLang]} />
+              </div>
+            </div>
+          ) : null}
 
           {/* Explicit dropdown + Generate button — the only way a new language gets created. */}
           {pendingLanguages.length > 0 ? (

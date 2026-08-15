@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { BookNavTabs } from "@/components/book-nav-tabs";
-import { ChapterDetailLoader } from "@/components/chapter-detail-loader";
+import { ChaptersClientShell } from "@/components/chapters-client-shell";
+import { ChaptersProgressBar } from "@/components/chapters-progress-bar";
 import { KnowledgeSection } from "@/components/knowledge-section";
-import { PageHeader } from "@/components/page-header";
 import { getAllChapterDetails, getBookIndex, getKnowledgePackage } from "@/lib/books";
 import { toSlug } from "@/lib/slug";
 
@@ -23,68 +23,45 @@ export default async function ChaptersPage({ params }: ChaptersPageProps) {
 
   const bookTitle = bookIndex?.book.title ?? knowledge!.book.title;
   const contents = bookIndex?.contents ?? knowledge!.contents;
-
-  // Flat list of all chapter titles from the table of contents
   const chapterTitles = contents.flatMap((part) => part.chapters);
 
-  // Pre-fetch all cached chapter details in parallel so the server component
-  // can pass initialDetails to each ChapterDetailLoader without blocking on each
   const allInitialDetails = bookIndex
     ? await Promise.all(chapterTitles.map((title) => getAllChapterDetails(slug, toSlug(title))))
     : [];
 
   return (
     <AppShell>
-      <PageHeader
-        eyebrow={bookTitle}
-        title="Contents & Chapters"
-        description="Original hierarchy plus chapter-level knowledge."
-      />
-
       <BookNavTabs slug={slug} active="chapters" />
 
-      {/* Table of contents grid */}
-      <section className="mb-8 grid gap-4 md:grid-cols-3">
-        {contents.map((part) => (
-          <KnowledgeSection key={part.title} title={part.title}>
-            <ul className="space-y-2">
-              {part.chapters.map((chapter) => (
-                <li key={chapter} className="text-sm leading-6">{chapter}</li>
-              ))}
-            </ul>
-          </KnowledgeSection>
-        ))}
-      </section>
+      <div className="mb-8">
+        <p className="mb-1 text-xs font-bold uppercase tracking-[0.22em] text-secondary">{bookTitle}</p>
+        <h1 className="font-display text-4xl font-bold text-on-background">Contents & Chapters</h1>
+        <ChaptersProgressBar slug={slug} total={chapterTitles.length} chapterTitles={chapterTitles} />
+      </div>
 
-      {/* Chapter detail section */}
-      <section className="grid gap-5">
-        {bookIndex ? (
-          // Indexed books: chapters already generated in a past session are read
-          // from disk here and rendered immediately — no fetch, no re-generation.
-          // Only chapters never visited before show the "Load" button.
-          chapterTitles.map((title, i) => (
-            <KnowledgeSection key={title} eyebrow="Chapter" title={title}>
-              <ChapterDetailLoader
-                slug={slug}
-                chapterTitle={title}
-                initialDetails={allInitialDetails[i]}
-              />
-            </KnowledgeSection>
-          ))
-        ) : (
-          // Legacy books (full package.json): render all chapter data immediately
-          knowledge!.chapters.map((chapter) => (
-            <KnowledgeSection key={chapter.title} eyebrow="Chapter" title={chapter.title}>
-              <p className="mb-5 leading-7">{chapter.summary}</p>
-              <div className="grid gap-4 md:grid-cols-3">
-                <LegacyList title="Key Ideas" items={chapter.keyIdeas} />
-                <LegacyList title="Examples" items={chapter.examples} />
-                <LegacyList title="Action Items" items={chapter.actionItems} />
-              </div>
-            </KnowledgeSection>
-          ))
-        )}
-      </section>
+      {bookIndex ? (
+        <ChaptersClientShell
+          slug={slug}
+          chapterTitles={chapterTitles}
+          allInitialDetails={allInitialDetails}
+        />
+      ) : (
+        /* Legacy books without index */
+        <div className="space-y-5">
+          {knowledge!.chapters.map((chapter) => (
+            <div key={chapter.title} id={`chapter-${toSlug(chapter.title)}`} className="scroll-mt-24">
+              <KnowledgeSection eyebrow="Chapter" title={chapter.title}>
+                <p className="mb-5 leading-7">{chapter.summary}</p>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <LegacyList title="Key Ideas" items={chapter.keyIdeas} />
+                  <LegacyList title="Examples" items={chapter.examples} />
+                  <LegacyList title="Action Items" items={chapter.actionItems} />
+                </div>
+              </KnowledgeSection>
+            </div>
+          ))}
+        </div>
+      )}
     </AppShell>
   );
 }
