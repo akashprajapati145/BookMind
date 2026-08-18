@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { ChapterDetail } from "@/lib/types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ChapterDetail, ChapterSection } from "@/lib/types";
 
 type ChapterInternalReaderProps = {
   chapterTitle: string;
@@ -9,43 +9,78 @@ type ChapterInternalReaderProps = {
   onClose: () => void;
 };
 
+// ── Page model ───────────────────────────────────────────────────────────────
+
+type SummaryPage   = { kind: "summary";  paragraphs: string[] };
+type ProsePage     = { kind: "prose";    title: string; paragraphs: string[] };
+type ListPage      = { kind: "list";     title: string; items: Array<{ label: string; explanation: string }> };
+type StepsPage     = { kind: "steps";    title: string; items: Array<{ step: string; explanation: string }> };
+type ExamplePage   = { kind: "example";  label: string; story: string };
+type ActionsPage   = { kind: "actions";  items: string[]; startIndex: number };
+type Page = SummaryPage | ProsePage | ListPage | StepsPage | ExamplePage | ActionsPage;
+
+const PROSE_PER_PAGE  = 3;
+const LIST_PER_PAGE   = 5;
+const STEPS_PER_PAGE  = 4;
+const ACTION_PER_PAGE = 5;
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+function buildPages(detail: ChapterDetail): Page[] {
+  const pages: Page[] = [];
+
+  // Summary — up to PROSE_PER_PAGE paragraphs per page
+  chunk(detail.summary, PROSE_PER_PAGE).forEach((paragraphs) =>
+    pages.push({ kind: "summary", paragraphs })
+  );
+
+  // Sections
+  detail.sections.forEach((section) => {
+    if (section.kind === "prose") {
+      chunk(section.paragraphs, PROSE_PER_PAGE).forEach((paragraphs) =>
+        pages.push({ kind: "prose", title: section.title, paragraphs })
+      );
+    } else if (section.kind === "list") {
+      chunk(section.items, LIST_PER_PAGE).forEach((items) =>
+        pages.push({ kind: "list", title: section.title, items })
+      );
+    } else {
+      chunk(section.items, STEPS_PER_PAGE).forEach((items) =>
+        pages.push({ kind: "steps", title: section.title, items })
+      );
+    }
+  });
+
+  // Standout example
+  if (detail.standoutExample) {
+    pages.push({ kind: "example", ...detail.standoutExample });
+  }
+
+  // Action items
+  if (detail.actionItems && detail.actionItems.length > 0) {
+    chunk(detail.actionItems, ACTION_PER_PAGE).forEach((items, ci) =>
+      pages.push({ kind: "actions", items, startIndex: ci * ACTION_PER_PAGE })
+    );
+  }
+
+  return pages;
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export function ChapterInternalReader({ chapterTitle, detail, onClose }: ChapterInternalReaderProps) {
+  const pages = buildPages(detail);
   const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [colWidth, setColWidth] = useState(0);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const columnsRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
-  // Effect 1: measure the wrapper's client width and store as colWidth.
-  // Only needs wrapperRef — always rendered, no chicken-and-egg issue.
-  useLayoutEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-
-    const measureWidth = () => {
-      const w = wrapper.clientWidth;
-      if (w > 0) setColWidth(w);
-    };
-
-    const t = setTimeout(measureWidth, 20);
-    const ro = new ResizeObserver(() => { setPage(0); measureWidth(); });
-    ro.observe(wrapper);
-    return () => { clearTimeout(t); ro.disconnect(); };
-  }, [detail]);
-
-  // Effect 2: once colWidth is known and columns div is rendered, count pages.
-  useEffect(() => {
-    if (colWidth === 0) return;
-    const columns = columnsRef.current;
-    if (!columns) return;
-    requestAnimationFrame(() => {
-      if (!columnsRef.current) return;
-      const total = Math.max(1, Math.round(columnsRef.current.scrollWidth / colWidth));
-      setTotalPages(total);
-    });
-  }, [colWidth, detail]);
+  const totalPages = pages.length;
+  const isFirst = page === 0;
+  const isLast  = page === totalPages - 1;
 
   const goNext = useCallback(() => setPage((p) => Math.min(p + 1, totalPages - 1)), [totalPages]);
   const goPrev = useCallback(() => setPage((p) => Math.max(p - 1, 0)), []);
@@ -53,8 +88,8 @@ export function ChapterInternalReader({ chapterTitle, detail, onClose }: Chapter
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === "ArrowRight") goNext();
-      if (e.key === "ArrowLeft") goPrev();
-      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft")  goPrev();
+      if (e.key === "Escape")     onClose();
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
@@ -76,16 +111,13 @@ export function ChapterInternalReader({ chapterTitle, detail, onClose }: Chapter
     touchStartY.current = null;
   }
 
-  const isFirst = page === 0;
-  const isLast = page === totalPages - 1;
-
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col bg-background"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Top bar */}
+      {/* ── Top bar ── */}
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3 md:px-8">
         <button
           onClick={onClose}
@@ -97,7 +129,7 @@ export function ChapterInternalReader({ chapterTitle, detail, onClose }: Chapter
           <span className="hidden sm:inline">Close</span>
         </button>
 
-        {/* Chapter title + dot indicators */}
+        {/* Title + dot indicators */}
         <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
           <p className="line-clamp-1 max-w-[200px] text-center text-xs font-bold text-on-surface-variant sm:max-w-sm md:max-w-md">
             {chapterTitle}
@@ -127,21 +159,20 @@ export function ChapterInternalReader({ chapterTitle, detail, onClose }: Chapter
           </button>
         </div>
 
-        {/* Mobile spacer to keep dots centred */}
         <div className="w-14 md:hidden" />
       </div>
 
-      {/* Outer: full-viewport, relative anchor for the floating arrows */}
-      <div className="relative flex-1">
+      {/* ── Sliding page strip ── */}
+      <div className="relative flex-1 overflow-hidden">
 
-        {/* Floating side arrows — span full height, sit outside the reading column */}
+        {/* Side arrows floating over the viewport */}
         <button
           onClick={goPrev}
           disabled={isFirst}
           aria-label="Previous page"
           className="absolute left-0 top-0 z-10 flex h-full w-10 items-center justify-center text-on-surface-variant/40 transition hover:text-on-surface-variant/80 disabled:pointer-events-none disabled:opacity-0 sm:w-14"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/8 backdrop-blur-sm">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </span>
         </button>
@@ -151,37 +182,27 @@ export function ChapterInternalReader({ chapterTitle, detail, onClose }: Chapter
           aria-label="Next page"
           className="absolute right-0 top-0 z-10 flex h-full w-10 items-center justify-center text-on-surface-variant/40 transition hover:text-on-surface-variant/80 disabled:pointer-events-none disabled:opacity-0 sm:w-14"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/8 backdrop-blur-sm">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
           </span>
         </button>
 
-        {/* Inner: centered reading column, clips the CSS-column strip */}
-        <div ref={wrapperRef} className="mx-auto h-full max-w-2xl overflow-hidden">
-          <div
-            ref={columnsRef}
-            className="h-full transition-transform duration-300 ease-in-out"
-            style={{
-              columnWidth: colWidth > 0 ? `${colWidth}px` : "100%",
-              columnGap: 0,
-              columnFill: "auto",
-              transform: colWidth > 0 ? `translateX(${-page * colWidth}px)` : undefined,
-            }}
-          >
-            <div
-              className="px-5 py-8 md:px-10"
-              style={{
-                boxDecorationBreak: "clone",
-                WebkitBoxDecorationBreak: "clone",
-              }}
-            >
-              <ContentFlow detail={detail} />
+        {/* The strip — all pages side-by-side, slide via transform */}
+        <div
+          className="flex h-full transition-transform duration-300 ease-in-out"
+          style={{ transform: `translateX(-${page * 100}%)` }}
+        >
+          {pages.map((p, i) => (
+            <div key={i} className="flex h-full w-full shrink-0 flex-col overflow-y-auto">
+              <div className="mx-auto my-auto w-full max-w-2xl px-5 py-8 md:px-10">
+                <PageView p={p} />
+              </div>
             </div>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Mobile bottom nav */}
+      {/* ── Mobile bottom nav ── */}
       <div className="flex shrink-0 items-center justify-between border-t border-white/10 px-6 py-4 md:hidden">
         <button
           onClick={goPrev}
@@ -205,70 +226,94 @@ export function ChapterInternalReader({ chapterTitle, detail, onClose }: Chapter
   );
 }
 
-// Renders all chapter content as a flat flowing document.
-// break-inside-avoid-column on key elements prevents them splitting mid-item.
-function ContentFlow({ detail }: { detail: ChapterDetail }) {
-  return (
-    <div className="space-y-6 text-base leading-8 text-on-surface">
-      {/* Summary */}
-      {detail.summary.map((p, i) => (
-        <p key={i} style={{ breakInside: "avoid-column" }}>{p}</p>
-      ))}
+// ── Page renderer ─────────────────────────────────────────────────────────────
 
-      {/* Sections */}
-      {detail.sections.map((section, si) => (
-        <div key={si} className="space-y-4">
-          {section.title && (
-            <h3
-              className="text-xs font-bold uppercase tracking-[0.2em] text-secondary"
-              style={{ breakAfter: "avoid-column" }}
-            >
-              {section.title}
-            </h3>
-          )}
-          {section.kind === "prose" && section.paragraphs.map((p, i) => (
-            <p key={i} style={{ breakInside: "avoid-column" }}>{p}</p>
-          ))}
-          {section.kind === "list" && section.items.map((item, i) => (
-            <div key={i} className="border-b border-white/10 pb-4 last:border-0" style={{ breakInside: "avoid-column" }}>
+function PageView({ p }: { p: Page }) {
+  if (p.kind === "summary") {
+    return (
+      <div className="space-y-4 text-base leading-8 text-on-surface">
+        {p.paragraphs.map((para, i) => <p key={i}>{para}</p>)}
+      </div>
+    );
+  }
+
+  if (p.kind === "prose") {
+    return (
+      <div className="space-y-4">
+        {p.title && <SectionLabel>{p.title}</SectionLabel>}
+        <div className="space-y-4 text-base leading-8 text-on-surface">
+          {p.paragraphs.map((para, i) => <p key={i}>{para}</p>)}
+        </div>
+      </div>
+    );
+  }
+
+  if (p.kind === "list") {
+    return (
+      <div className="space-y-4">
+        {p.title && <SectionLabel>{p.title}</SectionLabel>}
+        <ul className="space-y-4">
+          {p.items.map((item, i) => (
+            <li key={i} className="border-b border-white/10 pb-4 last:border-0">
               {item.label && <span className="block font-bold text-on-background">{item.label}</span>}
-              <span className="text-on-surface-variant">{item.explanation}</span>
-            </div>
+              <span className="text-sm leading-7 text-on-surface-variant">{item.explanation}</span>
+            </li>
           ))}
-          {section.kind === "steps" && section.items.map((item, i) => (
-            <div key={i} className="flex gap-4 border-b border-white/10 pb-4 last:border-0" style={{ breakInside: "avoid-column" }}>
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-sm font-bold text-primary">{i + 1}</span>
+        </ul>
+      </div>
+    );
+  }
+
+  if (p.kind === "steps") {
+    return (
+      <div className="space-y-4">
+        {p.title && <SectionLabel>{p.title}</SectionLabel>}
+        <ol className="space-y-4">
+          {p.items.map((item, i) => (
+            <li key={i} className="flex gap-4 border-b border-white/10 pb-4 last:border-0">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-sm font-bold text-primary">
+                {i + 1}
+              </span>
               <div>
                 {item.step && <span className="block font-bold text-on-background">{item.step}</span>}
                 {item.explanation && <p className="mt-1 text-sm leading-6 text-on-surface-variant">{item.explanation}</p>}
               </div>
-            </div>
+            </li>
           ))}
-        </div>
-      ))}
+        </ol>
+      </div>
+    );
+  }
 
-      {/* Standout example */}
-      {detail.standoutExample && (
-        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4" style={{ breakInside: "avoid-column" }}>
-          <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-secondary">{detail.standoutExample.label}</h3>
-          <p className="text-sm leading-7 text-on-surface-variant">{detail.standoutExample.story}</p>
-        </div>
-      )}
+  if (p.kind === "example") {
+    return (
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
+        <SectionLabel>{p.label}</SectionLabel>
+        <p className="mt-3 text-sm leading-7 text-on-surface-variant">{p.story}</p>
+      </div>
+    );
+  }
 
-      {/* Action items */}
-      {detail.actionItems && detail.actionItems.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-secondary" style={{ breakAfter: "avoid-column" }}>
-            Action Items
-          </h3>
-          {detail.actionItems.map((item, i) => (
-            <div key={i} className="flex gap-4" style={{ breakInside: "avoid-column" }}>
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-sm font-bold text-primary">{i + 1}</span>
-              <span>{item}</span>
-            </div>
-          ))}
-        </div>
-      )}
+  // actions
+  return (
+    <div className="space-y-4">
+      <SectionLabel>Action Items</SectionLabel>
+      <ol className="space-y-4">
+        {p.items.map((item, i) => (
+          <li key={i} className="flex gap-4">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-sm font-bold text-primary">
+              {p.startIndex + i + 1}
+            </span>
+            <span className="text-sm leading-7 text-on-surface-variant">{item}</span>
+          </li>
+        ))}
+      </ol>
     </div>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">{children}</h3>
   );
 }
