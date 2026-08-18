@@ -131,17 +131,17 @@ export function ChapterPageReader({ pages, initialPage = 0, onClose }: ChapterPa
         <div className="w-16 md:hidden" />
       </div>
 
-      {/* Content area — my-auto centers short chapters, long ones still scroll */}
-      <div className="relative flex-1 overflow-hidden">
+      {/* Content area */}
+      <div className="relative flex-1">
 
-        {/* Side nav arrows */}
+        {/* Floating side arrows */}
         <button
           onClick={goPrev}
           disabled={isFirst}
           aria-label="Previous chapter"
-          className="absolute left-0 top-0 z-10 flex h-full w-14 items-center justify-start pl-2 text-on-surface-variant/30 transition hover:text-on-surface-variant/70 disabled:pointer-events-none disabled:opacity-0 sm:w-16 sm:pl-3"
+          className="absolute left-0 top-0 z-10 flex h-full w-10 items-center justify-center text-on-surface-variant/40 transition hover:text-on-surface-variant/80 disabled:pointer-events-none disabled:opacity-0 sm:w-14"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 backdrop-blur-sm">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/8 backdrop-blur-sm">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </span>
         </button>
@@ -149,9 +149,9 @@ export function ChapterPageReader({ pages, initialPage = 0, onClose }: ChapterPa
           onClick={goNext}
           disabled={isLast}
           aria-label="Next chapter"
-          className="absolute right-0 top-0 z-10 flex h-full w-14 items-center justify-end pr-2 text-on-surface-variant/30 transition hover:text-on-surface-variant/70 disabled:pointer-events-none disabled:opacity-0 sm:w-16 sm:pr-3"
+          className="absolute right-0 top-0 z-10 flex h-full w-10 items-center justify-center text-on-surface-variant/40 transition hover:text-on-surface-variant/80 disabled:pointer-events-none disabled:opacity-0 sm:w-14"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 backdrop-blur-sm">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/8 backdrop-blur-sm">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
           </span>
         </button>
