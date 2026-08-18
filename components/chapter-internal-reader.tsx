@@ -193,8 +193,8 @@ export function ChapterInternalReader({ chapterTitle, detail, onClose }: Chapter
           style={{ transform: `translateX(-${page * 100}%)` }}
         >
           {pages.map((p, i) => (
-            <div key={i} className="flex h-full w-full shrink-0 flex-col overflow-y-auto">
-              <div className="mx-auto my-auto w-full max-w-2xl px-5 py-8 md:px-10">
+            <div key={i} className="h-full w-full shrink-0 overflow-y-auto">
+              <div className="mx-auto w-full max-w-2xl px-5 py-8 md:px-10">
                 <PageView p={p} />
               </div>
             </div>

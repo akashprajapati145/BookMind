@@ -131,17 +131,16 @@ export function ChapterPageReader({ pages, initialPage = 0, onClose }: ChapterPa
         <div className="w-16 md:hidden" />
       </div>
 
-      {/* Content area */}
-      <div className="relative flex-1">
-
-        {/* Floating side arrows */}
+      {/* Content area — scrollable, arrows float on top via absolute positioning */}
+      <div className="relative flex-1 overflow-hidden">
+        {/* Side arrows — fixed over the scrollable content, don't move with scroll */}
         <button
           onClick={goPrev}
           disabled={isFirst}
           aria-label="Previous chapter"
           className="absolute left-0 top-0 z-10 flex h-full w-10 items-center justify-center text-on-surface-variant/40 transition hover:text-on-surface-variant/80 disabled:pointer-events-none disabled:opacity-0 sm:w-14"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/8 backdrop-blur-sm">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </span>
         </button>
@@ -151,35 +150,36 @@ export function ChapterPageReader({ pages, initialPage = 0, onClose }: ChapterPa
           aria-label="Next chapter"
           className="absolute right-0 top-0 z-10 flex h-full w-10 items-center justify-center text-on-surface-variant/40 transition hover:text-on-surface-variant/80 disabled:pointer-events-none disabled:opacity-0 sm:w-14"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/8 backdrop-blur-sm">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
           </span>
         </button>
 
-        <div ref={contentRef} className="flex h-full flex-col overflow-y-auto">
-        <div className="mx-auto my-auto w-full max-w-2xl px-5 py-8 md:px-8">
-          <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-secondary">
-            Chapter {current + 1}
-          </p>
-          <h2 className="mb-8 font-display text-3xl font-bold leading-tight text-on-background md:text-4xl">
-            {page.title}
-          </h2>
+        {/* Original simple scrollable content — no height tricks */}
+        <div ref={contentRef} className="h-full overflow-y-auto">
+          <div className="mx-auto max-w-2xl px-5 py-8 md:px-8 md:py-12">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-secondary">
+              Chapter {current + 1}
+            </p>
+            <h2 className="mb-8 font-display text-3xl font-bold leading-tight text-on-background md:text-4xl">
+              {page.title}
+            </h2>
 
-          {page.detail ? (
-            <PageContent detail={page.detail} />
-          ) : (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-              <p className="text-on-surface-variant">
-                This chapter hasn&apos;t been generated yet.
-              </p>
-              <p className="mt-2 text-sm text-on-surface-variant opacity-60">
-                Go back to scroll view and load this chapter first.
-              </p>
-            </div>
-          )}
+            {page.detail ? (
+              <PageContent detail={page.detail} />
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+                <p className="text-on-surface-variant">
+                  This chapter hasn&apos;t been generated yet.
+                </p>
+                <p className="mt-2 text-sm text-on-surface-variant opacity-60">
+                  Go back to scroll view and load this chapter first.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-        </div>{/* end contentRef scroll div */}
-      </div>{/* end relative wrapper */}
+      </div>
 
       {/* Mobile bottom nav */}
       <div className="flex shrink-0 items-center justify-between border-t border-white/10 px-6 py-4 md:hidden">
