@@ -131,9 +131,9 @@ export function ChapterPageReader({ pages, initialPage = 0, onClose }: ChapterPa
         <div className="w-16 md:hidden" />
       </div>
 
-      {/* Content area — scrollable within the page */}
-      <div ref={contentRef} className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-2xl px-5 py-8 md:px-8 md:py-12">
+      {/* Content area — my-auto centers short chapters, long ones still scroll */}
+      <div ref={contentRef} className="flex flex-1 flex-col overflow-y-auto">
+        <div className="mx-auto my-auto w-full max-w-2xl px-5 py-8 md:px-8">
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-secondary">
             Chapter {current + 1}
           </p>

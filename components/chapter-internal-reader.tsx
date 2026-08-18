@@ -1,35 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { ChapterDetail, ChapterSection } from "@/lib/types";
-
-type Page =
-  | { kind: "summary"; paragraphs: string[] }
-  | { kind: "section"; section: ChapterSection; index: number }
-  | { kind: "example"; label: string; story: string }
-  | { kind: "actions"; items: string[] };
-
-function buildPages(detail: ChapterDetail): Page[] {
-  const pages: Page[] = [];
-
-  if (detail.summary.length > 0) {
-    pages.push({ kind: "summary", paragraphs: detail.summary });
-  }
-
-  detail.sections.forEach((section, index) => {
-    pages.push({ kind: "section", section, index });
-  });
-
-  if (detail.standoutExample) {
-    pages.push({ kind: "example", label: detail.standoutExample.label, story: detail.standoutExample.story });
-  }
-
-  if (detail.actionItems && detail.actionItems.length > 0) {
-    pages.push({ kind: "actions", items: detail.actionItems });
-  }
-
-  return pages;
-}
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { ChapterDetail } from "@/lib/types";
 
 type ChapterInternalReaderProps = {
   chapterTitle: string;
@@ -38,26 +10,47 @@ type ChapterInternalReaderProps = {
 };
 
 export function ChapterInternalReader({ chapterTitle, detail, onClose }: ChapterInternalReaderProps) {
-  const pages = buildPages(detail);
-  const [current, setCurrent] = useState(0);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [colWidth, setColWidth] = useState(0);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const columnsRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
 
-  const goNext = useCallback(() => {
-    setCurrent((p) => Math.min(p + 1, pages.length - 1));
-    contentRef.current?.scrollTo({ top: 0, behavior: "instant" });
-  }, [pages.length]);
-
-  const goPrev = useCallback(() => {
-    setCurrent((p) => Math.max(p - 1, 0));
-    contentRef.current?.scrollTo({ top: 0, behavior: "instant" });
+  // Measure wrapper width → set as column width → measure scrollWidth → get total pages
+  const measure = useCallback(() => {
+    const wrapper = wrapperRef.current;
+    const columns = columnsRef.current;
+    if (!wrapper || !columns) return;
+    const w = wrapper.clientWidth;
+    if (w === 0) return;
+    setColWidth(w);
+    // Wait one frame for the browser to apply the new column width and reflow
+    requestAnimationFrame(() => {
+      const total = Math.max(1, Math.round(columns.scrollWidth / w));
+      setTotalPages(total);
+    });
   }, []);
+
+  useLayoutEffect(() => {
+    // Small delay so content is fully painted before we measure
+    const t = setTimeout(measure, 50);
+    const ro = new ResizeObserver(() => {
+      setPage(0);
+      measure();
+    });
+    if (wrapperRef.current) ro.observe(wrapperRef.current);
+    return () => { clearTimeout(t); ro.disconnect(); };
+  }, [measure, detail]);
+
+  const goNext = useCallback(() => setPage((p) => Math.min(p + 1, totalPages - 1)), [totalPages]);
+  const goPrev = useCallback(() => setPage((p) => Math.max(p - 1, 0)), []);
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "ArrowRight" || e.key === "ArrowDown") goNext();
-      if (e.key === "ArrowLeft" || e.key === "ArrowUp") goPrev();
+      if (e.key === "ArrowRight") goNext();
+      if (e.key === "ArrowLeft") goPrev();
       if (e.key === "Escape") onClose();
     }
     window.addEventListener("keydown", handleKey);
@@ -80,9 +73,8 @@ export function ChapterInternalReader({ chapterTitle, detail, onClose }: Chapter
     touchStartY.current = null;
   }
 
-  const isFirst = current === 0;
-  const isLast = current === pages.length - 1;
-  const page = pages[current];
+  const isFirst = page === 0;
+  const isLast = page === totalPages - 1;
 
   return (
     <div
@@ -102,47 +94,67 @@ export function ChapterInternalReader({ chapterTitle, detail, onClose }: Chapter
           <span className="hidden sm:inline">Close</span>
         </button>
 
-        {/* Chapter title + page dots */}
-        <div className="flex min-w-0 flex-1 flex-col items-center gap-1">
-          <p className="line-clamp-1 max-w-xs text-center text-xs font-bold text-on-surface-variant md:max-w-md">
+        {/* Chapter title + dot indicators */}
+        <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+          <p className="line-clamp-1 max-w-[200px] text-center text-xs font-bold text-on-surface-variant sm:max-w-sm md:max-w-md">
             {chapterTitle}
           </p>
           <div className="flex items-center gap-1.5">
-            {pages.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => { setCurrent(i); contentRef.current?.scrollTo({ top: 0, behavior: "instant" }); }}
-                className={`rounded-full transition-all ${
-                  i === current ? "h-2 w-5 bg-primary" : "h-2 w-2 bg-white/20 hover:bg-white/40"
-                }`}
-              />
-            ))}
+            {totalPages <= 12 ? (
+              Array.from({ length: totalPages }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPage(i)}
+                  className={`rounded-full transition-all ${i === page ? "h-2 w-5 bg-primary" : "h-2 w-2 bg-white/20 hover:bg-white/40"}`}
+                />
+              ))
+            ) : (
+              <span className="text-xs font-bold text-on-surface-variant">{page + 1} / {totalPages}</span>
+            )}
           </div>
         </div>
 
-        {/* Desktop prev/next */}
+        {/* Desktop prev / next */}
         <div className="hidden items-center gap-2 md:flex">
           <button onClick={goPrev} disabled={isFirst} className="rounded-full border border-white/10 p-2 text-on-surface-variant hover:bg-white/5 disabled:opacity-30">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </button>
           <button onClick={goNext} disabled={isLast} className="rounded-full border border-white/10 p-2 text-on-surface-variant hover:bg-white/5 disabled:opacity-30">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
           </button>
         </div>
 
-        {/* Mobile spacer */}
-        <div className="w-12 md:hidden" />
+        {/* Mobile spacer to keep dots centred */}
+        <div className="w-14 md:hidden" />
       </div>
 
-      {/* Content */}
-      <div ref={contentRef} className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-2xl px-5 py-8 md:px-8 md:py-12">
-          <PageView page={page} />
-        </div>
+      {/* Viewport — clips to exactly one screen-wide column */}
+      <div ref={wrapperRef} className="relative flex-1 overflow-hidden">
+        {colWidth > 0 && (
+          <div
+            ref={columnsRef}
+            className="h-full transition-transform duration-300 ease-in-out"
+            style={{
+              // Each column = one screen. Content flows into as many columns as needed.
+              columnWidth: `${colWidth}px`,
+              columnGap: 0,
+              columnFill: "auto",
+              transform: `translateX(${-page * colWidth}px)`,
+            }}
+          >
+            {/* Inner padding div — box-decoration-break:clone repeats padding in each column */}
+            <div
+              className="py-8"
+              style={{
+                paddingInline: "clamp(1.25rem, 5vw, 3rem)",
+                boxDecorationBreak: "clone",
+                WebkitBoxDecorationBreak: "clone",
+              }}
+            >
+              <ContentFlow detail={detail} />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Mobile bottom nav */}
@@ -152,104 +164,87 @@ export function ChapterInternalReader({ chapterTitle, detail, onClose }: Chapter
           disabled={isFirst}
           className="flex items-center gap-2 rounded-full border border-white/10 px-4 py-2.5 text-sm font-bold text-on-surface-variant active:bg-white/5 disabled:opacity-30"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           Prev
         </button>
-        <span className="text-xs font-bold text-on-surface-variant">{current + 1} / {pages.length}</span>
+        <span className="text-xs font-bold text-on-surface-variant">{page + 1} / {totalPages}</span>
         <button
           onClick={goNext}
           disabled={isLast}
           className="flex items-center gap-2 rounded-full border border-white/10 px-4 py-2.5 text-sm font-bold text-on-surface-variant active:bg-white/5 disabled:opacity-30"
         >
           Next
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
         </button>
       </div>
     </div>
   );
 }
 
-function PageView({ page }: { page: Page }) {
-  if (page.kind === "summary") {
-    return (
-      <div className="space-y-5">
-        <p className="text-xs font-bold uppercase tracking-[0.22em] text-secondary">Summary</p>
-        {page.paragraphs.map((p, i) => (
-          <p key={i} className="text-base leading-8 text-on-surface">{p}</p>
-        ))}
-      </div>
-    );
-  }
+// Renders all chapter content as a flat flowing document.
+// break-inside-avoid-column on key elements prevents them splitting mid-item.
+function ContentFlow({ detail }: { detail: ChapterDetail }) {
+  return (
+    <div className="space-y-6 text-base leading-8 text-on-surface">
+      {/* Summary */}
+      {detail.summary.map((p, i) => (
+        <p key={i} style={{ breakInside: "avoid-column" }}>{p}</p>
+      ))}
 
-  if (page.kind === "section") {
-    const { section } = page;
-    return (
-      <div className="space-y-5">
-        {section.title && (
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-secondary">{section.title}</p>
-        )}
-        {section.kind === "prose" && (
-          <div className="space-y-4">
-            {section.paragraphs.map((p, i) => (
-              <p key={i} className="text-base leading-8 text-on-surface">{p}</p>
-            ))}
-          </div>
-        )}
-        {section.kind === "list" && (
-          <ul className="space-y-4">
-            {section.items.map((item, i) => (
-              <li key={i} className="border-b border-white/10 pb-4 last:border-0">
-                {item.label && <span className="block font-bold text-on-background">{item.label}</span>}
-                <span className="text-sm leading-7 text-on-surface-variant">{item.explanation}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-        {section.kind === "steps" && (
-          <ol className="space-y-4">
-            {section.items.map((item, i) => (
-              <li key={i} className="flex gap-4 border-b border-white/10 pb-4 last:border-0">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-sm font-bold text-primary">{i + 1}</span>
-                <div>
-                  {item.step && <span className="block font-bold text-on-background">{item.step}</span>}
-                  {item.explanation && <p className="mt-1 text-sm leading-6 text-on-surface-variant">{item.explanation}</p>}
-                </div>
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
-    );
-  }
-
-  if (page.kind === "example") {
-    return (
-      <div className="space-y-5">
-        <p className="text-xs font-bold uppercase tracking-[0.22em] text-secondary">{page.label}</p>
-        <p className="text-base leading-8 text-on-surface">{page.story}</p>
-      </div>
-    );
-  }
-
-  if (page.kind === "actions") {
-    return (
-      <div className="space-y-5">
-        <p className="text-xs font-bold uppercase tracking-[0.22em] text-secondary">Action Items</p>
-        <ul className="space-y-4">
-          {page.items.map((item, i) => (
-            <li key={i} className="flex gap-4">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-sm font-bold text-primary">{i + 1}</span>
-              <span className="text-base leading-7 text-on-surface">{item}</span>
-            </li>
+      {/* Sections */}
+      {detail.sections.map((section, si) => (
+        <div key={si} className="space-y-4">
+          {section.title && (
+            <h3
+              className="text-xs font-bold uppercase tracking-[0.2em] text-secondary"
+              style={{ breakAfter: "avoid-column" }}
+            >
+              {section.title}
+            </h3>
+          )}
+          {section.kind === "prose" && section.paragraphs.map((p, i) => (
+            <p key={i} style={{ breakInside: "avoid-column" }}>{p}</p>
           ))}
-        </ul>
-      </div>
-    );
-  }
+          {section.kind === "list" && section.items.map((item, i) => (
+            <div key={i} className="border-b border-white/10 pb-4 last:border-0" style={{ breakInside: "avoid-column" }}>
+              {item.label && <span className="block font-bold text-on-background">{item.label}</span>}
+              <span className="text-on-surface-variant">{item.explanation}</span>
+            </div>
+          ))}
+          {section.kind === "steps" && section.items.map((item, i) => (
+            <div key={i} className="flex gap-4 border-b border-white/10 pb-4 last:border-0" style={{ breakInside: "avoid-column" }}>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-sm font-bold text-primary">{i + 1}</span>
+              <div>
+                {item.step && <span className="block font-bold text-on-background">{item.step}</span>}
+                {item.explanation && <p className="mt-1 text-sm leading-6 text-on-surface-variant">{item.explanation}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
 
-  return null;
+      {/* Standout example */}
+      {detail.standoutExample && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4" style={{ breakInside: "avoid-column" }}>
+          <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-secondary">{detail.standoutExample.label}</h3>
+          <p className="text-sm leading-7 text-on-surface-variant">{detail.standoutExample.story}</p>
+        </div>
+      )}
+
+      {/* Action items */}
+      {detail.actionItems && detail.actionItems.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-secondary" style={{ breakAfter: "avoid-column" }}>
+            Action Items
+          </h3>
+          {detail.actionItems.map((item, i) => (
+            <div key={i} className="flex gap-4" style={{ breakInside: "avoid-column" }}>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-sm font-bold text-primary">{i + 1}</span>
+              <span>{item}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
