@@ -156,8 +156,8 @@ export function ChapterPageReader({ pages, initialPage = 0, onClose }: ChapterPa
           </span>
         </button>
 
-        <div ref={contentRef} className="flex h-full flex-col overflow-y-auto">
-        <div className="mx-auto my-auto w-full max-w-2xl px-5 py-8 md:px-8">
+        <div ref={contentRef} className="h-full overflow-y-auto">
+        <div className="mx-auto w-full max-w-2xl px-5 py-8 md:px-8">
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-secondary">
             Chapter {current + 1}
           </p>
