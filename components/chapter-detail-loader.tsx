@@ -19,7 +19,12 @@ export function ChapterDetailLoader({ slug, chapterTitle, initialDetails, isDone
   const [detailByLang, setDetailByLang] = useState<Record<string, ChapterDetail>>(
     initialDetails ?? {}
   );
-  const [activeLang, setActiveLang] = useState(DEFAULT_LANGUAGE);
+  // Default to English if available, otherwise the first generated language
+  const [activeLang, setActiveLang] = useState<string>(() => {
+    const available = Object.keys(initialDetails ?? {});
+    if (available.includes(DEFAULT_LANGUAGE)) return DEFAULT_LANGUAGE;
+    return available[0] ?? DEFAULT_LANGUAGE;
+  });
 
   // Language chosen before the first generation — user picks this upfront to avoid wasting an API call
   const [firstLang, setFirstLang] = useState(DEFAULT_LANGUAGE);
