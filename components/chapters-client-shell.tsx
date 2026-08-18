@@ -77,7 +77,6 @@ export function ChaptersClientShell({ slug, chapterTitles, allInitialDetails }: 
                   isDone={done.has(title)}
                   onToggleDone={() => toggle(title)}
                   onLoaded={(lang, detail) => handleChapterLoaded(title, lang, detail)}
-                  onOpenPageView={() => openPageReader(i)}
                 />
               </KnowledgeSection>
             </div>

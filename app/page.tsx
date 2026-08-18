@@ -59,19 +59,20 @@ export default async function HomePage() {
 
       {featured ? (
         <GlassCard className="mt-6 flex flex-col gap-5 p-5 sm:flex-row sm:items-center">
-          <div className="w-20 flex-shrink-0 sm:w-24">
+          <div className="w-20 shrink-0 sm:w-24">
             <BookCover title={featured.title} author={featured.author} compact />
           </div>
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-secondary">Continue Reading</p>
-            <h2 className="mt-1 font-display text-2xl font-bold text-on-background">{featured.title}</h2>
+            <h2 className="mt-1 line-clamp-2 break-all font-display text-2xl font-bold text-on-background">{featured.title}</h2>
             <p className="mt-2 line-clamp-2 text-sm leading-6 text-on-surface-variant">{featured.thesis}</p>
           </div>
           <Link
             href={routes.book(featured.slug)}
-            className="flex-shrink-0 rounded-full bg-primary px-5 py-3 font-bold text-on-primary"
+            className="shrink-0 rounded-full bg-primary px-5 py-3 font-bold text-on-primary sm:self-center"
           >
-            Continue Reading
+            <span className="sm:hidden">Open →</span>
+            <span className="hidden sm:inline">Continue Reading</span>
           </Link>
         </GlassCard>
       ) : null}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ChapterInternalReader } from "@/components/chapter-internal-reader";
 import { DEFAULT_LANGUAGE, LANGUAGES } from "@/lib/languages";
 import type { ChapterDetail, ChapterSection } from "@/lib/types";
 
@@ -11,10 +12,10 @@ type ChapterDetailLoaderProps = {
   isDone?: boolean;
   onToggleDone?: () => void;
   onLoaded?: (lang: string, detail: ChapterDetail) => void;
-  onOpenPageView?: () => void;
 };
 
-export function ChapterDetailLoader({ slug, chapterTitle, initialDetails, isDone, onToggleDone, onLoaded, onOpenPageView }: ChapterDetailLoaderProps) {
+export function ChapterDetailLoader({ slug, chapterTitle, initialDetails, isDone, onToggleDone, onLoaded }: ChapterDetailLoaderProps) {
+  const [internalReaderOpen, setInternalReaderOpen] = useState(false);
   const [detailByLang, setDetailByLang] = useState<Record<string, ChapterDetail>>(
     initialDetails ?? {}
   );
@@ -155,18 +156,16 @@ export function ChapterDetailLoader({ slug, chapterTitle, initialDetails, isDone
           {/* Action bar: page view + mark done */}
           {detailByLang[activeLang] ? (
             <div className="flex flex-wrap items-center gap-2">
-              {onOpenPageView && (
-                <button
-                  type="button"
-                  onClick={onOpenPageView}
-                  className="flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-bold text-on-surface-variant transition hover:border-primary/40 hover:text-on-background"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-                  </svg>
-                  Page view
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setInternalReaderOpen(true)}
+                className="flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-bold text-on-surface-variant transition hover:border-primary/40 hover:text-on-background"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                </svg>
+                Page view
+              </button>
               {onToggleDone && (
                 <button
                   type="button"
@@ -187,6 +186,14 @@ export function ChapterDetailLoader({ slug, chapterTitle, initialDetails, isDone
           ) : null}
 
           {detailByLang[activeLang] ? <ChapterContent detail={detailByLang[activeLang]} /> : null}
+
+          {internalReaderOpen && detailByLang[activeLang] ? (
+            <ChapterInternalReader
+              chapterTitle={chapterTitle}
+              detail={detailByLang[activeLang]}
+              onClose={() => setInternalReaderOpen(false)}
+            />
+          ) : null}
 
           {/* Explicit dropdown + Generate button — the only way a new language gets created. */}
           {pendingLanguages.length > 0 ? (
