@@ -133,6 +133,29 @@ export function ChapterInternalReader({ chapterTitle, detail, onClose }: Chapter
 
       {/* Viewport — clips to exactly one screen-wide column */}
       <div ref={wrapperRef} className="relative flex-1 overflow-hidden">
+
+        {/* Side nav arrows — absolutely positioned over the content */}
+        <button
+          onClick={goPrev}
+          disabled={isFirst}
+          aria-label="Previous page"
+          className="absolute left-0 top-0 z-10 flex h-full w-14 items-center justify-start pl-2 text-on-surface-variant/30 transition hover:text-on-surface-variant/70 disabled:pointer-events-none disabled:opacity-0 sm:w-16 sm:pl-3"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 backdrop-blur-sm">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+          </span>
+        </button>
+        <button
+          onClick={goNext}
+          disabled={isLast}
+          aria-label="Next page"
+          className="absolute right-0 top-0 z-10 flex h-full w-14 items-center justify-end pr-2 text-on-surface-variant/30 transition hover:text-on-surface-variant/70 disabled:pointer-events-none disabled:opacity-0 sm:w-16 sm:pr-3"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 backdrop-blur-sm">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+          </span>
+        </button>
+
         <div
           ref={columnsRef}
           className="h-full transition-transform duration-300 ease-in-out"

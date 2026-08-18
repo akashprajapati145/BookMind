@@ -132,7 +132,31 @@ export function ChapterPageReader({ pages, initialPage = 0, onClose }: ChapterPa
       </div>
 
       {/* Content area — my-auto centers short chapters, long ones still scroll */}
-      <div ref={contentRef} className="flex flex-1 flex-col overflow-y-auto">
+      <div className="relative flex-1 overflow-hidden">
+
+        {/* Side nav arrows */}
+        <button
+          onClick={goPrev}
+          disabled={isFirst}
+          aria-label="Previous chapter"
+          className="absolute left-0 top-0 z-10 flex h-full w-14 items-center justify-start pl-2 text-on-surface-variant/30 transition hover:text-on-surface-variant/70 disabled:pointer-events-none disabled:opacity-0 sm:w-16 sm:pl-3"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 backdrop-blur-sm">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+          </span>
+        </button>
+        <button
+          onClick={goNext}
+          disabled={isLast}
+          aria-label="Next chapter"
+          className="absolute right-0 top-0 z-10 flex h-full w-14 items-center justify-end pr-2 text-on-surface-variant/30 transition hover:text-on-surface-variant/70 disabled:pointer-events-none disabled:opacity-0 sm:w-16 sm:pr-3"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 backdrop-blur-sm">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+          </span>
+        </button>
+
+        <div ref={contentRef} className="flex h-full flex-col overflow-y-auto">
         <div className="mx-auto my-auto w-full max-w-2xl px-5 py-8 md:px-8">
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-secondary">
             Chapter {current + 1}
@@ -154,7 +178,8 @@ export function ChapterPageReader({ pages, initialPage = 0, onClose }: ChapterPa
             </div>
           )}
         </div>
-      </div>
+        </div>{/* end contentRef scroll div */}
+      </div>{/* end relative wrapper */}
 
       {/* Mobile bottom nav */}
       <div className="flex shrink-0 items-center justify-between border-t border-white/10 px-6 py-4 md:hidden">
