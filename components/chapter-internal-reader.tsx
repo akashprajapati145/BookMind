@@ -18,31 +18,34 @@ export function ChapterInternalReader({ chapterTitle, detail, onClose }: Chapter
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
-  // Measure wrapper width → set as column width → measure scrollWidth → get total pages
-  const measure = useCallback(() => {
+  // Effect 1: measure the wrapper's client width and store as colWidth.
+  // Only needs wrapperRef — always rendered, no chicken-and-egg issue.
+  useLayoutEffect(() => {
     const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    const measureWidth = () => {
+      const w = wrapper.clientWidth;
+      if (w > 0) setColWidth(w);
+    };
+
+    const t = setTimeout(measureWidth, 20);
+    const ro = new ResizeObserver(() => { setPage(0); measureWidth(); });
+    ro.observe(wrapper);
+    return () => { clearTimeout(t); ro.disconnect(); };
+  }, [detail]);
+
+  // Effect 2: once colWidth is known and columns div is rendered, count pages.
+  useEffect(() => {
+    if (colWidth === 0) return;
     const columns = columnsRef.current;
-    if (!wrapper || !columns) return;
-    const w = wrapper.clientWidth;
-    if (w === 0) return;
-    setColWidth(w);
-    // Wait one frame for the browser to apply the new column width and reflow
+    if (!columns) return;
     requestAnimationFrame(() => {
-      const total = Math.max(1, Math.round(columns.scrollWidth / w));
+      if (!columnsRef.current) return;
+      const total = Math.max(1, Math.round(columnsRef.current.scrollWidth / colWidth));
       setTotalPages(total);
     });
-  }, []);
-
-  useLayoutEffect(() => {
-    // Small delay so content is fully painted before we measure
-    const t = setTimeout(measure, 50);
-    const ro = new ResizeObserver(() => {
-      setPage(0);
-      measure();
-    });
-    if (wrapperRef.current) ro.observe(wrapperRef.current);
-    return () => { clearTimeout(t); ro.disconnect(); };
-  }, [measure, detail]);
+  }, [colWidth, detail]);
 
   const goNext = useCallback(() => setPage((p) => Math.min(p + 1, totalPages - 1)), [totalPages]);
   const goPrev = useCallback(() => setPage((p) => Math.max(p - 1, 0)), []);
@@ -130,31 +133,30 @@ export function ChapterInternalReader({ chapterTitle, detail, onClose }: Chapter
 
       {/* Viewport — clips to exactly one screen-wide column */}
       <div ref={wrapperRef} className="relative flex-1 overflow-hidden">
-        {colWidth > 0 && (
+        <div
+          ref={columnsRef}
+          className="h-full transition-transform duration-300 ease-in-out"
+          style={{
+            // Before measurement: use 100% so content renders visibly.
+            // After measurement: switch to exact pixel width for accurate column breaks.
+            columnWidth: colWidth > 0 ? `${colWidth}px` : "100%",
+            columnGap: 0,
+            columnFill: "auto",
+            transform: colWidth > 0 ? `translateX(${-page * colWidth}px)` : undefined,
+          }}
+        >
+          {/* Inner padding div — box-decoration-break:clone repeats padding in each column */}
           <div
-            ref={columnsRef}
-            className="h-full transition-transform duration-300 ease-in-out"
+            className="py-8"
             style={{
-              // Each column = one screen. Content flows into as many columns as needed.
-              columnWidth: `${colWidth}px`,
-              columnGap: 0,
-              columnFill: "auto",
-              transform: `translateX(${-page * colWidth}px)`,
+              paddingInline: "clamp(1.25rem, 5vw, 3rem)",
+              boxDecorationBreak: "clone",
+              WebkitBoxDecorationBreak: "clone",
             }}
           >
-            {/* Inner padding div — box-decoration-break:clone repeats padding in each column */}
-            <div
-              className="py-8"
-              style={{
-                paddingInline: "clamp(1.25rem, 5vw, 3rem)",
-                boxDecorationBreak: "clone",
-                WebkitBoxDecorationBreak: "clone",
-              }}
-            >
-              <ContentFlow detail={detail} />
-            </div>
+            <ContentFlow detail={detail} />
           </div>
-        )}
+        </div>
       </div>
 
       {/* Mobile bottom nav */}
