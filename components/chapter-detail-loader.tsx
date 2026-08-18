@@ -138,25 +138,56 @@ export function ChapterDetailLoader({ slug, chapterTitle, initialDetails, isDone
         </>
       ) : (
         <>
-          {/* Tags only exist for languages that are already generated — clicking one only switches the view. */}
-          {generatedLanguages.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {generatedLanguages.map((language) => (
+          {/* Top bar: language tabs + generate new language — all in one row at the top */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Generated language tabs */}
+            {generatedLanguages.map((language) => (
+              <button
+                key={language.code}
+                type="button"
+                onClick={() => setActiveLang(language.code)}
+                className={
+                  activeLang === language.code
+                    ? "rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-on-primary"
+                    : "rounded-full border border-white/10 px-3 py-1.5 text-xs font-bold text-on-surface-variant transition hover:border-primary/40"
+                }
+              >
+                {language.label}
+              </button>
+            ))}
+
+            {/* Generate additional language — shown inline with the tabs */}
+            {pendingLanguages.length > 0 && (
+              <>
+                <div className="relative inline-flex">
+                  <select
+                    value={selectedPending}
+                    onChange={(e) => setSelectedPending(e.target.value)}
+                    disabled={generating}
+                    className="appearance-none rounded-full border border-white/10 bg-white/5 py-1.5 pl-3 pr-7 text-xs font-semibold text-on-background outline-none focus:border-primary/40 disabled:opacity-60"
+                  >
+                    {pendingLanguages.map((language) => (
+                      <option key={language.code} value={language.code} className="bg-background text-on-background">
+                        {language.label}
+                      </option>
+                    ))}
+                  </select>
+                  <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </div>
                 <button
-                  key={language.code}
                   type="button"
-                  onClick={() => setActiveLang(language.code)}
-                  className={
-                    activeLang === language.code
-                      ? "rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-on-primary"
-                      : "rounded-full border border-white/10 px-3 py-1.5 text-xs font-bold text-on-surface-variant transition hover:border-primary/40"
-                  }
+                  onClick={generateSelected}
+                  disabled={generating || !selectedPending}
+                  className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-bold text-on-surface-variant transition hover:border-primary/40 hover:text-on-background disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {language.label}
+                  {generating ? "Generating..." : "+ Generate"}
                 </button>
-              ))}
-            </div>
-          ) : null}
+                {generateError ? <span className="text-xs text-red-300">{generateError}</span> : null}
+              </>
+            )}
+          </div>
 
           {/* Action bar: page view + mark done */}
           {detailByLang[activeLang] ? (
@@ -198,48 +229,6 @@ export function ChapterDetailLoader({ slug, chapterTitle, initialDetails, isDone
               detail={detailByLang[activeLang]}
               onClose={() => setInternalReaderOpen(false)}
             />
-          ) : null}
-
-          {/* Explicit dropdown + Generate button — the only way a new language gets created. */}
-          {pendingLanguages.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-3 border-t border-white/10 pt-4">
-              <div className="relative inline-flex">
-                <select
-                  value={selectedPending}
-                  onChange={(event) => setSelectedPending(event.target.value)}
-                  disabled={generating}
-                  className="appearance-none rounded-full border border-white/10 bg-white/5 py-2 pl-4 pr-8 text-sm font-semibold text-on-background outline-none focus:border-primary/40 disabled:opacity-60"
-                >
-                  {pendingLanguages.map((language) => (
-                    <option key={language.code} value={language.code} className="bg-background text-on-background">
-                      {language.label}
-                    </option>
-                  ))}
-                </select>
-                <svg
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </div>
-              <button
-                type="button"
-                onClick={generateSelected}
-                disabled={generating || !selectedPending}
-                className="rounded-full border border-white/10 px-4 py-2 text-sm font-bold text-on-surface-variant transition hover:border-primary/40 hover:text-on-background disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {generating ? "Generating..." : "Generate"}
-              </button>
-              {generateError ? <span className="text-sm text-red-300">{generateError}</span> : null}
-            </div>
           ) : null}
         </>
       )}
