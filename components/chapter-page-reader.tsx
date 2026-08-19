@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DEFAULT_LANGUAGE, LANGUAGES } from "@/lib/languages";
 import type { ChapterDetail, ChapterSection } from "@/lib/types";
 
 type PageEntry = {
@@ -9,12 +10,14 @@ type PageEntry = {
 };
 
 type ChapterPageReaderProps = {
+  slug: string;
   pages: PageEntry[];
   initialPage?: number;
   onClose: () => void;
+  onChapterLoaded?: (title: string, lang: string, detail: ChapterDetail) => void;
 };
 
-export function ChapterPageReader({ pages, initialPage = 0, onClose }: ChapterPageReaderProps) {
+export function ChapterPageReader({ slug, pages, initialPage = 0, onClose, onChapterLoaded }: ChapterPageReaderProps) {
   const [current, setCurrent] = useState(initialPage);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
@@ -168,14 +171,11 @@ export function ChapterPageReader({ pages, initialPage = 0, onClose }: ChapterPa
             {page.detail ? (
               <PageContent detail={page.detail} />
             ) : (
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-                <p className="text-on-surface-variant">
-                  This chapter hasn&apos;t been generated yet.
-                </p>
-                <p className="mt-2 text-sm text-on-surface-variant opacity-60">
-                  Go back to scroll view and load this chapter first.
-                </p>
-              </div>
+              <GenerateInReader
+                slug={slug}
+                chapterTitle={page.title}
+                onLoaded={(lang, detail) => onChapterLoaded?.(page.title, lang, detail)}
+              />
             )}
           </div>
         </div>
@@ -207,6 +207,77 @@ export function ChapterPageReader({ pages, initialPage = 0, onClose }: ChapterPa
           </svg>
         </button>
       </div>
+    </div>
+  );
+}
+
+// ── Inline generate UI for unloaded chapters ──────────────────────────────────
+
+type GenerateInReaderProps = {
+  slug: string;
+  chapterTitle: string;
+  onLoaded: (lang: string, detail: ChapterDetail) => void;
+};
+
+function GenerateInReader({ slug, chapterTitle, onLoaded }: GenerateInReaderProps) {
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [error, setError] = useState("");
+
+  async function generate() {
+    setStatus("loading");
+    setError("");
+    try {
+      const res = await fetch(`/api/books/${slug}/chapters`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: chapterTitle, lang }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null) as { error?: string } | null;
+        throw new Error(data?.error ?? "Failed to generate chapter.");
+      }
+      const data = await res.json() as { chapter: ChapterDetail };
+      onLoaded(lang, data.chapter);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Generation failed.");
+      setStatus("error");
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
+      <p className="mb-1 font-bold text-on-background">Chapter not generated yet</p>
+      <p className="mb-6 text-sm text-on-surface-variant">Choose a language and generate the summary to read it here.</p>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative inline-flex">
+          <select
+            value={lang}
+            onChange={(e) => setLang(e.target.value)}
+            disabled={status === "loading"}
+            className="appearance-none rounded-full border border-white/10 bg-white/5 py-2 pl-4 pr-8 text-sm font-semibold text-on-background outline-none focus:border-primary/40 disabled:opacity-60"
+          >
+            {LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code} className="bg-background text-on-background">{l.label}</option>
+            ))}
+          </select>
+          <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </div>
+
+        <button
+          type="button"
+          onClick={generate}
+          disabled={status === "loading"}
+          className="rounded-full border border-white/10 px-5 py-2 text-sm font-bold text-on-surface-variant transition hover:border-primary/40 hover:text-on-background disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {status === "loading" ? "Generating…" : "Generate"}
+        </button>
+      </div>
+
+      {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
     </div>
   );
 }

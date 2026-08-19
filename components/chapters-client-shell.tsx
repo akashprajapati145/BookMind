@@ -87,9 +87,11 @@ export function ChaptersClientShell({ slug, chapterTitles, allInitialDetails }: 
       {/* Page reader overlay */}
       {pageReaderOpen && (
         <ChapterPageReader
+          slug={slug}
           pages={pages}
           initialPage={pageReaderStart}
           onClose={() => setPageReaderOpen(false)}
+          onChapterLoaded={handleChapterLoaded}
         />
       )}
     </>
