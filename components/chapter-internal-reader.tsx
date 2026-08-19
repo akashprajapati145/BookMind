@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ChapterDetail, ChapterSection } from "@/lib/types";
 
 type ChapterInternalReaderProps = {
@@ -114,7 +115,7 @@ export function ChapterInternalReader({ chapterTitle, detail, onClose }: Chapter
     touchStartY.current = null;
   }
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
@@ -203,7 +204,8 @@ export function ChapterInternalReader({ chapterTitle, detail, onClose }: Chapter
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
 
