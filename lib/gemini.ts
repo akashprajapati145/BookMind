@@ -675,9 +675,12 @@ function normalizeFlashMode(value: unknown): LearningMode {
 
 // ─── Staged generation: single chapter (adaptive structure) ──────────────────
 
-// When chapter isolation fails, cap the full-book fallback so one chapter
-// generation doesn't consume the entire daily quota.
-const CHAPTER_FALLBACK_LIMIT = 200_000;
+// Window sent to Gemini when chapter title isolation fails.
+// Centred on the chapter's estimated position in the text rather than
+// always sending from the start of the book (which bleeds in content from
+// unrelated chapters that appear early — e.g. Chapter 1 content showing up
+// in Chapter 8's generation because the fallback included the whole beginning).
+const CHAPTER_POSITION_WINDOW = 60_000;
 
 export async function generateChapterDetail(
   book: Book,
@@ -689,7 +692,24 @@ export async function generateChapterDetail(
   const allChapterTitles = index.contents.flatMap((part) => part.chapters);
   const outline = book.pdfPath ? await loadOutline(path.join(process.cwd(), book.pdfPath)) : null;
   const isolated = isolateChapterText(sourceText, allChapterTitles, chapterTitle, outline);
-  const chapterText = isolated ?? sourceText.slice(0, CHAPTER_FALLBACK_LIMIT);
+
+  let chapterText: string;
+  if (isolated) {
+    chapterText = isolated;
+  } else {
+    // Isolation failed — title not found in extracted text (common when PDFs use
+    // decorative title pages that don't extract as plain text).
+    // Estimate position from chapter index so we don't pull in unrelated chapters.
+    const targetIndex   = allChapterTitles.indexOf(chapterTitle);
+    const totalChapters = allChapterTitles.length;
+    if (targetIndex >= 0 && totalChapters > 1) {
+      const estimatedCenter = Math.floor(((targetIndex + 0.5) / totalChapters) * sourceText.length);
+      const start = Math.max(0, estimatedCenter - CHAPTER_POSITION_WINDOW / 2);
+      chapterText = sourceText.slice(start, start + CHAPTER_POSITION_WINDOW);
+    } else {
+      chapterText = sourceText.slice(0, CHAPTER_POSITION_WINDOW * 3);
+    }
+  }
 
   const raw = await callGemini<unknown>(
     buildChapterDetailPrompt(book, chapterTitle, chapterText, index.thesis, lang, isolated === null)
@@ -744,7 +764,7 @@ function buildChapterDetailPrompt(
       : `\n\nRespond entirely in ${languageLabel(lang)}. Every field must be written in ${languageLabel(lang)}, not English.`;
 
   const scopeNote = isFullBookFallback
-    ? `This chapter's exact boundaries could not be isolated, so you have the full book text below. Focus ONLY on the chapter titled "${chapterTitle}" and ignore all other chapters.`
+    ? `The text below is a window sampled from roughly where "${chapterTitle}" appears in the book. It may include the tail of the previous chapter and the opening of the next. Use ONLY content that is clearly and directly about "${chapterTitle}". Do NOT borrow stories or examples from other chapters even if they seem related.`
     : `The text below is the isolated content of this chapter only.`;
 
   return `You are BookMind, a book learning system that explains chapters the way a smart, well-read friend would — not the way an AI writes a report.
@@ -785,7 +805,7 @@ Section shape guide:
 - "prose" — for "argument" or "narrative" chapters. This is the chapter's main substance when there's no list to carry it, so give it real room: 2-4 full paragraphs. For narrative, trace the actual arc (what happens, in what order) with enough detail to follow the story, not a thin recap. For argument, walk through how the reasoning builds step by step, not just the conclusion.
 
 Rules:
-- "summary": 2-3 paragraphs of genuine connective narrative — explain HOW the chapter's ideas build and connect, and WHY it unfolds in that order, the way a well-read friend would walk you through it before you get to the specifics. This is the chapter's "story," not a list — do not enumerate or restate individual items here (the sections below do that), but do make the reader feel like they understand the chapter's shape before reading further. Each paragraph MUST be its own separate string in the array — never combine multiple paragraphs into one array element. The array should have 2-3 elements, not 1.
+- "summary": exactly 1 short paragraph (2-3 sentences) — state the single core insight or question this chapter raises, written as a hook that makes the reader want to know more. Do NOT preview, outline, or repeat what the sections below already cover. The sections handle the detail; the summary is just the "why this chapter matters" in plain language. Return an array with exactly 1 string.
 - "sections": at least one. An enumerated chapter normally needs exactly one "list" section containing every item — don't split items across multiple sections or add a second section that just repeats them in prose.
 - "standoutExample": omit this field entirely unless there's one genuinely distinct, memorable story worth calling out on its own, separate from anything already covered inside a list/steps item. Most chapters should omit it.
 - "actionItems": omit this field entirely if the chapter has no real actionable takeaway (most narrative/biography chapters won't). Only include it when the chapter actually supports concrete action, and keep items distinct from what the sections above already say.
