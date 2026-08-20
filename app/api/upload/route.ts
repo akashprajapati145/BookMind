@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Book, KnowledgePackage } from "@/lib/types";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 // Receives JSON after the PDF has been uploaded directly to Supabase Storage by the client.
 // Only handles text extraction + DB writes — the large PDF never passes through Vercel.
@@ -95,12 +95,67 @@ export async function POST(request: Request) {
   return NextResponse.json({ book });
 }
 
+// Returns true if the extracted text looks like real language content.
+// Broken-font PDFs produce Dingbats/Symbol characters (U+2600–U+27FF)
+// instead of readable text — English and Unicode Hindi never contain these.
+function isTextReadable(text: string): boolean {
+  const sample = text.slice(0, 2000).replace(/\s/g, "");
+  if (sample.length === 0) return false;
+  const symbolCount = [...sample].filter((c) => {
+    const code = c.charCodeAt(0);
+    return (code >= 0x2600 && code <= 0x27FF) || (code >= 0xE000 && code <= 0xF8FF);
+  }).length;
+  return symbolCount / sample.length < 0.1;
+}
+
+// Sends the PDF to Gemini as an inline document and asks it to OCR the text.
+// Only called when pdf-parse produces unreadable symbols (broken font encoding).
+async function extractWithGeminiOCR(pdfBytes: Buffer): Promise<string | null> {
+  const apiKey = process.env.GOOGLE_API_KEY?.split(",")[0].trim();
+  if (!apiKey) return null;
+  try {
+    const base64Pdf = pdfBytes.toString("base64");
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            role: "user",
+            parts: [
+              { inlineData: { mimeType: "application/pdf", data: base64Pdf } },
+              { text: "Extract ALL text from this document exactly as written. Preserve the original language and script. Return only the extracted text with no commentary or formatting." }
+            ]
+          }],
+          generationConfig: { temperature: 0, maxOutputTokens: 65536 }
+        })
+      }
+    );
+    if (!res.ok) return null;
+    const data = await res.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+    const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("").trim();
+    return text && text.length > 100 ? text : null;
+  } catch {
+    return null;
+  }
+}
+
 async function extractPdfText(bytes: Buffer) {
   const result = await pdfParse(bytes);
   const text = result.text.trim();
+
   if (!text) {
     return "No selectable text was extracted from this PDF. It may be scanned or image-based.";
   }
+
+  // If pdf-parse returned symbols instead of text (broken proprietary font encoding),
+  // fall back to Gemini OCR. English and Unicode books never trigger this path.
+  if (!isTextReadable(text)) {
+    const ocrText = await extractWithGeminiOCR(bytes);
+    if (ocrText) return ocrText;
+  }
+
   return text;
 }
 

@@ -549,15 +549,32 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 // from any book, and leaves the bulk of the daily free-tier quota for chapter generation.
 const INDEX_TEXT_LIMIT = 100_000;
 
+// Detects whether the source text is primarily Devanagari (Hindi/Sanskrit etc.)
+// so the index prompt can instruct Gemini to respond in that language.
+function detectSourceLanguage(text: string): string | null {
+  const sample = text.slice(0, 3000).replace(/\s/g, "");
+  if (sample.length === 0) return null;
+  const devanagariCount = [...sample].filter((c) => {
+    const code = c.charCodeAt(0);
+    return code >= 0x0900 && code <= 0x097F;
+  }).length;
+  return devanagariCount / sample.length > 0.3 ? "Hindi" : null;
+}
+
 export async function generateBookIndex(book: Book, sourceText: string): Promise<BookIndex> {
   const text = sourceText.length > INDEX_TEXT_LIMIT
     ? sourceText.slice(0, INDEX_TEXT_LIMIT)
     : sourceText;
-  const raw = await callGemini<unknown>(buildIndexPrompt(text));
+  const detectedLang = detectSourceLanguage(text);
+  const raw = await callGemini<unknown>(buildIndexPrompt(text, detectedLang));
   return normalizeBookIndex(book, raw);
 }
 
-function buildIndexPrompt(sourceText: string): string {
+function buildIndexPrompt(sourceText: string, detectedLang: string | null = null): string {
+  const langInstruction = detectedLang
+    ? `\n\nThe source text is in ${detectedLang}. You MUST write ALL output fields in ${detectedLang} — thesis, framework, every overview paragraph, conceptTitles, and all flashMode text. Do not translate anything to English.`
+    : "";
+
   return `You are BookMind, a book learning system.
 
 Generate a fast structural index for this book. Do NOT write full chapter summaries — extract only the structure, concept names, and a 1-minute overview.
@@ -586,7 +603,7 @@ Limits:
 - contents: reflect the actual chapter structure, max 25 chapters total across all parts
 - conceptTitles: max 15 names — ONLY the title string, no descriptions
 - flashMode.sections: max 2 sections, max 5 items each, max 120 chars per item
-
+${langInstruction}
 CRITICAL rules for "contents" (chapter list):
 - If the book has a table of contents, use it as the ONLY source of truth for chapter names and count. Do not infer extra chapters from internal section headings or sub-headings within chapters.
 - Copy chapter and part titles EXACTLY as they appear in the source — same script, same language, same spelling. Do NOT translate, transliterate, paraphrase, or anglicize titles. If the book is in Hindi, titles must be in Hindi. If in French, in French. Never convert to English.
