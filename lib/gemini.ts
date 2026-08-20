@@ -587,6 +587,12 @@ Limits:
 - conceptTitles: max 15 names — ONLY the title string, no descriptions
 - flashMode.sections: max 2 sections, max 5 items each, max 120 chars per item
 
+CRITICAL rules for "contents" (chapter list):
+- If the book has a table of contents, use it as the ONLY source of truth for chapter names and count. Do not infer extra chapters from internal section headings or sub-headings within chapters.
+- Copy chapter and part titles EXACTLY as they appear in the source — same script, same language, same spelling. Do NOT translate, transliterate, paraphrase, or anglicize titles. If the book is in Hindi, titles must be in Hindi. If in French, in French. Never convert to English.
+- A "chapter" is a top-level division of the book (e.g. "Chapter 1", "अध्याय 1"). Sub-sections or headings inside a chapter are NOT separate chapters — do not list them as chapters.
+- The chapter count in your output must match the actual number of top-level chapters in the book exactly.
+
 BOOK:
 ${sourceText}`;
 }
