@@ -107,11 +107,10 @@ export async function POST(_request: Request, { params }: RouteProps) {
     const message = error instanceof Error ? error.message : "Index generation failed.";
     const isQuotaError = message.toLowerCase().includes("quota") || message.includes("RESOURCE_EXHAUSTED");
     if (isQuotaError) {
-      const retryMatch = message.match(/retry in ([\d.]+)s/i);
-      const retrySeconds = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : null;
-      const waitMsg = retrySeconds
-        ? ` Please wait about ${Math.ceil(retrySeconds / 60)} minute${retrySeconds > 60 ? "s" : ""} and try again.`
-        : " Daily free-tier limit reached. Please try again later.";
+      const isDailyLimit = message.includes("input_token_count") || message.includes("daily") || message.includes("free_tier");
+      const waitMsg = isDailyLimit
+        ? " You've hit the daily free-tier token limit. Please try again tomorrow (quota resets at midnight Pacific time)."
+        : " Too many requests. Please wait a minute and try again.";
       return NextResponse.json({ error: `API quota exceeded.${waitMsg}` }, { status: 429 });
     }
 
