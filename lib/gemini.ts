@@ -31,7 +31,7 @@ type GenerationOptions = {
   onChunk?: (chunk: ChunkKnowledge) => Promise<void>;
 };
 
-const model = "gemini-2.5-flash";
+const model = "gemini-3.6-flash";
 const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 const chunkSize = 120000;
 
