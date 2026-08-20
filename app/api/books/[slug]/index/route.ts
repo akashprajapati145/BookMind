@@ -104,9 +104,17 @@ export async function POST(_request: Request, { params }: RouteProps) {
       .eq("user_id", user.id)
       .eq("slug", slug);
 
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Index generation failed." },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : "Index generation failed.";
+    const isQuotaError = message.toLowerCase().includes("quota") || message.includes("RESOURCE_EXHAUSTED");
+    if (isQuotaError) {
+      const retryMatch = message.match(/retry in ([\d.]+)s/i);
+      const retrySeconds = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : null;
+      const waitMsg = retrySeconds
+        ? ` Please wait about ${Math.ceil(retrySeconds / 60)} minute${retrySeconds > 60 ? "s" : ""} and try again.`
+        : " Daily free-tier limit reached. Please try again later.";
+      return NextResponse.json({ error: `API quota exceeded.${waitMsg}` }, { status: 429 });
+    }
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

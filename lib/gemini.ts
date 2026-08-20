@@ -545,8 +545,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 // ─── Staged generation: index ────────────────────────────────────────────────
 
+// Cap at 100K chars (~25–40K tokens) — enough to extract TOC and structure
+// from any book, and leaves the bulk of the daily free-tier quota for chapter generation.
+const INDEX_TEXT_LIMIT = 100_000;
+
 export async function generateBookIndex(book: Book, sourceText: string): Promise<BookIndex> {
-  const raw = await callGemini<unknown>(buildIndexPrompt(sourceText));
+  const text = sourceText.length > INDEX_TEXT_LIMIT
+    ? sourceText.slice(0, INDEX_TEXT_LIMIT)
+    : sourceText;
+  const raw = await callGemini<unknown>(buildIndexPrompt(text));
   return normalizeBookIndex(book, raw);
 }
 
@@ -620,6 +627,10 @@ function normalizeFlashMode(value: unknown): LearningMode {
 
 // ─── Staged generation: single chapter (adaptive structure) ──────────────────
 
+// When chapter isolation fails, cap the full-book fallback so one chapter
+// generation doesn't consume the entire daily quota.
+const CHAPTER_FALLBACK_LIMIT = 200_000;
+
 export async function generateChapterDetail(
   book: Book,
   chapterTitle: string,
@@ -630,7 +641,7 @@ export async function generateChapterDetail(
   const allChapterTitles = index.contents.flatMap((part) => part.chapters);
   const outline = book.pdfPath ? await loadOutline(path.join(process.cwd(), book.pdfPath)) : null;
   const isolated = isolateChapterText(sourceText, allChapterTitles, chapterTitle, outline);
-  const chapterText = isolated ?? sourceText;
+  const chapterText = isolated ?? sourceText.slice(0, CHAPTER_FALLBACK_LIMIT);
 
   const raw = await callGemini<unknown>(
     buildChapterDetailPrompt(book, chapterTitle, chapterText, index.thesis, lang, isolated === null)
