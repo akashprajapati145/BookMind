@@ -545,9 +545,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 // ─── Staged generation: index ────────────────────────────────────────────────
 
-// Cap at 100K chars (~25–40K tokens) — enough to extract TOC and structure
-// from any book, and leaves the bulk of the daily free-tier quota for chapter generation.
-const INDEX_TEXT_LIMIT = 100_000;
+// Token budgets per language.
+// English tokenises ~1 token per 4 chars; Hindi Devanagari ~1 token per 2.5 chars.
+// Both limits keep the index call well under 60K tokens so the daily free-tier
+// quota stays mostly available for chapter generation.
+const INDEX_LIMIT_ENGLISH = 200_000; // ~50K tokens
+const INDEX_LIMIT_HINDI   = 100_000; // ~40K tokens
 
 // Detects whether the source text is primarily Devanagari (Hindi/Sanskrit etc.)
 // so the index prompt can instruct Gemini to respond in that language.
@@ -561,12 +564,34 @@ function detectSourceLanguage(text: string): string | null {
   return devanagariCount / sample.length > 0.3 ? "Hindi" : null;
 }
 
+// Builds a structured sample of the book for index generation.
+// Sends the first 70% of the limit as a solid head (covers early chapters),
+// then evenly-spaced snippets from the rest so Gemini can see every part of
+// the book and infer chapter titles even when the PDF has no machine-readable TOC.
+function buildBookSample(sourceText: string, limit: number): string {
+  if (sourceText.length <= limit) return sourceText;
+
+  const headSize    = Math.floor(limit * 0.7);
+  const sampleBudget = limit - headSize;
+  const remaining   = sourceText.slice(headSize);
+  const sampleCount = 10;
+  const sampleSize  = Math.floor(sampleBudget / sampleCount);
+  const chunkSize   = Math.floor(remaining.length / sampleCount);
+
+  let samples = "";
+  for (let i = 0; i < sampleCount; i++) {
+    const start = i * chunkSize;
+    samples += "\n\n[...]\n\n" + remaining.slice(start, start + sampleSize);
+  }
+
+  return sourceText.slice(0, headSize) + samples;
+}
+
 export async function generateBookIndex(book: Book, sourceText: string): Promise<BookIndex> {
-  const text = sourceText.length > INDEX_TEXT_LIMIT
-    ? sourceText.slice(0, INDEX_TEXT_LIMIT)
-    : sourceText;
-  const detectedLang = detectSourceLanguage(text);
-  const raw = await callGemini<unknown>(buildIndexPrompt(text, detectedLang));
+  const detectedLang = detectSourceLanguage(sourceText);
+  const limit = detectedLang === "Hindi" ? INDEX_LIMIT_HINDI : INDEX_LIMIT_ENGLISH;
+  const text  = buildBookSample(sourceText, limit);
+  const raw   = await callGemini<unknown>(buildIndexPrompt(text, detectedLang));
   return normalizeBookIndex(book, raw);
 }
 
